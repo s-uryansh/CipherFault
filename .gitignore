@@ -1,0 +1,5 @@
+corpus/build/
+*.o
+*.out
+*.exe
+*.pt
