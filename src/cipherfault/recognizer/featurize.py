@@ -7,8 +7,9 @@ import torch
 from torch_geometric.data import Data
 from ..lifting.types import LiftedFunction
 
-VOCAB = ["MOV", "XOR", "AND", "OR", "SHL", "SHR", "ROL", "ROR",
-        "ADD", "SUB", "LEA", "CMP", "TEST", "JMP", "CALL", "PUSH", "POP"
+VOCAB = ["MOV", "MOVZX", "MOVSX", "XOR", "AND", "OR", "SHL", "SHR", "ROL", "ROR",
+        "ADD", "ADC", "SUB", "MUL", "IMUL", "LEA", "CMP", "TEST",
+        "JMP", "CALL", "PUSH", "POP"
         ]
 VOCAB_INDEX = {m: i for i, m in enumerate(VOCAB)}
 
