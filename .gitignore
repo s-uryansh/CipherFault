@@ -3,3 +3,13 @@ corpus/build/
 *.out
 *.exe
 *.pt
+.venv/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*_ghidra/
+*.gpr
+*.rep/
