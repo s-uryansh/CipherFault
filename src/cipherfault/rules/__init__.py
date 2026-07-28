@@ -75,6 +75,67 @@ def hardcoded_key_finding(anchor, path, primitive: str = "AES") -> Finding | Non
     )
 
 
+def ecb_mode_finding(anchor, cipher_name: str | None, primitive: str = "AES") -> Finding | None:
+    if cipher_name is None or "_ecb" not in cipher_name.lower():
+        return None
+
+    function = str(getattr(anchor, "func_name", ""))
+    callee = str(getattr(anchor, "callee", ""))
+    call_addr = str(getattr(anchor, "call_addr", ""))
+    fact_type = "ecb_mode"
+    cwe = "CWE-327"
+    tier = "VERIFIED_FACT"
+
+    return Finding(
+        id=_finding_id(primitive, fact_type, function, callee, call_addr, cipher_name),
+        tier=tier,
+        primitive=primitive,
+        fact_type=fact_type,
+        cwe=cwe,
+        summary=f"{primitive} cipher selector resolves to ECB mode: {cipher_name}",
+        function=function,
+        callee=callee,
+        call_addr=call_addr,
+        operand="cipher",
+        origin=cipher_name,
+        provenance=[
+            {
+                "kind": "CALL_TARGET",
+                "detail": cipher_name,
+                "varnode": "",
+            }
+        ],
+    )
+
+def static_iv_finding(anchor, path, primitive: str = "AES") -> Finding | None:
+    if getattr(path, "terminal", None) != "CONST":
+        return None
+
+    origin = getattr(path, "origin", None)
+    if origin in (None, "0x0"):
+        return None
+    function = str(getattr(anchor, "func_name", ""))
+    callee = str(getattr(anchor, "callee", ""))
+    call_addr = str(getattr(anchor, "call_addr", ""))
+    fact_type = "static_iv"
+    cwe = "CWE-329"
+    tier = "VERIFIED_FACT"
+
+    return Finding(
+        id=_finding_id(primitive, fact_type, function, callee, call_addr, str(origin)),
+        tier=tier,
+        primitive=primitive,
+        fact_type=fact_type,
+        cwe=cwe,
+        summary=f"{primitive} IV operand resolves to constant {origin}",
+        function=function,
+        callee=callee,
+        call_addr=call_addr,
+        operand="iv",
+        origin=origin,
+        provenance=serialize_provenance(path),
+    )
+
 def _finding_id(*parts: str) -> str:
     raw = "|".join(parts).encode("utf-8", "replace")
     return sha256(raw).hexdigest()[:16]

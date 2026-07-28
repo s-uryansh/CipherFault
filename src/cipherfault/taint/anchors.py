@@ -1,14 +1,21 @@
-"""
-This is to find the crytographic init call sites in a decompiled lib
-will return structured anchors for the tracer to walk backward from
-"""
+"""Find cryptographic init call sites in a decompiled program."""
 
 from dataclasses import dataclass
 
+
 CRYPTO_INITS = {
-    "EVP_EncryptInit_ex": {"key": 4, "iv": 5},
-    "EVP_DecryptInit_ex": {"key": 4, "iv": 5},
+    "EVP_EncryptInit_ex": {"cipher": 2, "key": 4, "iv": 5},
+    "EVP_DecryptInit_ex": {"cipher": 2, "key": 4, "iv": 5},
 }
+
+WEAK_RANDOM_SOURCES = {
+    "time": "TIME",
+    "clock": "TIME",
+    "gettimeofday": "TIME",
+    "rand": "WEAK_RNG",
+    "srand": "WEAK_RNG_SEED"
+}
+
 
 @dataclass
 class Anchor:
@@ -18,16 +25,16 @@ class Anchor:
     operands: dict
     high: object
 
-def _callee_name(program, target_vm):
-    if not target_vm.isAddress():
+
+def callee_name(program, target_vn):
+    if not target_vn.isAddress():
         return None
-    fn = program.getFunctionManager().getFunctionAt(target_vm.getAddress())
+    fn = program.getFunctionManager().getFunctionAt(target_vn.getAddress())
     return str(fn.getName()) if fn else None
 
+
 def find_anchors(program, decomp, monitor, timeout=60):
-    """
-    Decompile everey functionm return list[Anchor]
-    """
+    """Decompile each internal function and return crypto init anchors."""
     from ghidra.program.model.pcode import PcodeOp
 
     anchors = []
@@ -45,21 +52,22 @@ def find_anchors(program, decomp, monitor, timeout=60):
         for op in high.getPcodeOps():
             if op.getOpcode() != PcodeOp.CALL:
                 continue
-            callee = _callee_name(program, op.getInput(0))
+            callee = callee_name(program, op.getInput(0))
             if callee not in CRYPTO_INITS:
                 continue
 
-            operand_map = CRYPTO_INITS[callee]
             operands = {}
-            for name, idx in operand_map.items():
+            for name, idx in CRYPTO_INITS[callee].items():
                 if op.getNumInputs() > idx:
                     operands[name] = op.getInput(idx)
 
-            anchors.append(Anchor(
-                func_name=str(f.getName()),
-                callee=callee,
-                call_addr=str(op.getSeqnum().getTarget()),
-                operands=operands,
-                high=high
-            ))
+            anchors.append(
+                Anchor(
+                    func_name=str(f.getName()),
+                    callee=callee,
+                    call_addr=str(op.getSeqnum().getTarget()),
+                    operands=operands,
+                    high=high,
+                )
+            )
     return anchors

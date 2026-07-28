@@ -5,7 +5,7 @@ sys.path.insert(0, "src")
 
 from cipherfault.rules import hardcoded_key_finding
 from cipherfault.taint.tracer import ProvenancePath, Step
-
+from cipherfault.rules import ecb_mode_finding
 
 def _anchor():
     return SimpleNamespace(
@@ -43,3 +43,15 @@ def test_non_const_key_path_emits_no_finding():
     path.add(Step("INPUT", "no def", "input"))
     path.terminal = "INPUT"
     assert hardcoded_key_finding(_anchor(), path) is None
+
+def test_ecb_cipher_selector_emits_ecb_finding():
+    finding = ecb_mode_finding(_anchor(), "EVP_aes_128_ecb")
+
+    assert finding is not None
+    assert finding.tier == "VERIFIED_FACT"
+    assert finding.fact_type == "ecb_mode"
+    assert finding.cwe == "CWE-327"
+    assert finding.operand == "cipher"
+
+def test_non_ecb_cipher_selector_emits_no_ecb_finding():
+    assert ecb_mode_finding(_anchor(), "EVP_aes_128_cbc") is None
