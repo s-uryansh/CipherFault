@@ -1,0 +1,16 @@
+[
+  {
+    "id": "DEMO-CPP-GOOF-HARDCODED-IV",
+    "source_url": "https://github.com/Arvi3d/cpp-goof",
+    "source_commit": "f0ec7300e74b4d15922dd9e893f6389834e1ca55",
+    "binary": "corpus/eval/DEMO-CPP-GOOF/target_strip",
+    "expected_facts": [
+      {
+        "fact_type": "static_iv",
+        "cwe": "CWE-329"
+      }
+    ],
+    "license": "No license file observed; source and derived binary are not redistributed by CipherFault.",
+    "notes": "Optional independent demo smoke test, not a CVE benchmark."
+  }
+]

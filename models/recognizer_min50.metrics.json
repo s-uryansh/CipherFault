@@ -1,0 +1,202 @@
+{
+  "asserted": {
+    "AES": 47,
+    "ML-KEM": 0,
+    "none": 1809
+  },
+  "dataset": "corpus/build/recognizer_dataset_min50.pt",
+  "false_positive_examples": [
+    {
+      "actual": "none",
+      "function": "png_free_data",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_free_data",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_free_data",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_get_next_frame_fcTL",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_get_next_frame_fcTL",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_get_next_frame_fcTL",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_read_image",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_do_read_swap_alpha",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_do_read_filler",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_do_read_transformations",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_handle_IHDR",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_set_pCAL",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_set_pCAL",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_set_pCAL",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_set_pCAL",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_set_iCCP",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_set_unknown_chunks",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_set_pCAL",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_set_iCCP",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_set_unknown_chunks",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_set_pCAL",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_set_iCCP",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_do_invert",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_do_strip_channel",
+      "predicted": "AES",
+      "source": "libpng"
+    },
+    {
+      "actual": "none",
+      "function": "png_do_bgr",
+      "predicted": "AES",
+      "source": "libpng"
+    }
+  ],
+  "gate": {
+    "minimum_support": {
+      "AES": 100,
+      "ML-KEM": 100,
+      "none": 1000
+    },
+    "none_false_positive_rate": 0.01,
+    "primitive_precision": 0.95
+  },
+  "none_false_positive_rate": 0.01646611839532852,
+  "passed": false,
+  "precision": {
+    "AES": 0.44680851063829785,
+    "ML-KEM": 0.0,
+    "none": 0.8584853510226644
+  },
+  "recall": {
+    "AES": 0.14685314685314685,
+    "ML-KEM": 0.0,
+    "none": 0.9835338822039266
+  },
+  "split": {
+    "held_out_sources": [
+      "liboqs",
+      "libpng",
+      "libsodium",
+      "mbedtls"
+    ],
+    "test": 1856,
+    "train": 922,
+    "validation": 258
+  },
+  "support": {
+    "AES": 143,
+    "ML-KEM": 134,
+    "none": 1579
+  },
+  "temperature": 11.005160331726074,
+  "thresholds": {
+    "AES": 0.4568144977092743,
+    "ML-KEM": 1.1
+  }
+}

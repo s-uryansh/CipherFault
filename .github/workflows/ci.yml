@@ -1,0 +1,60 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/cache@v4
+        id: ghidra-cache
+        with:
+          path: ${{ runner.tool_cache }}/ghidra_12.1.2_PUBLIC
+          key: ghidra-12.1.2-public-20260605
+      - if: steps.ghidra-cache.outputs.cache-hit != 'true'
+        env:
+          GHIDRA_ZIP: ${{ runner.temp }}/ghidra.zip
+        run: |
+          curl -fsSL https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.2_build/ghidra_12.1.2_PUBLIC_20260605.zip -o "$GHIDRA_ZIP"
+          echo "b62e81a0390618466c019c60d8c2f796ced2509c4c1aea4a37644a77272cf99d  $GHIDRA_ZIP" | sha256sum -c -
+          unzip -q "$GHIDRA_ZIP" -d "${{ runner.tool_cache }}"
+      - run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      - run: pip install -e ".[dev]"
+      - run: bash scripts/build_fixtures.sh
+      - run: pytest -q
+        env:
+          GHIDRA_INSTALL_DIR: ${{ runner.tool_cache }}/ghidra_12.1.2_PUBLIC
+      - run: python scripts/evaluate_manifest.py corpus/eval/manifest.local.json
+        env:
+          GHIDRA_INSTALL_DIR: ${{ runner.tool_cache }}/ghidra_12.1.2_PUBLIC
+      - run: python scripts/evaluate_manifest.py corpus/eval/manifest.negative.json
+        env:
+          GHIDRA_INSTALL_DIR: ${{ runner.tool_cache }}/ghidra_12.1.2_PUBLIC
+      - run: python -m build --no-isolation --wheel --outdir "${{ runner.temp }}/wheels"
+      - run: python -m pip install --no-deps --target "${{ runner.temp }}/installed" "${{ runner.temp }}"/wheels/*.whl
+      - run: python -m cipherfault.cli --version
+        env:
+          PYTHONPATH: ${{ runner.temp }}/installed
+      - run: python scripts/generate_sbom.py --output "${{ runner.temp }}/cipherfault.sbom.json"
+      - run: docker build -t cipherfault:ci .
+      - run: docker run --rm cipherfault:ci --version

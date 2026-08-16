@@ -1,0 +1,137 @@
+[
+{
+    "id": "LOCAL-ECC-NAMED-CURVE",
+    "source_url": "local fixture",
+    "binary": "corpus/build/ecc_curve",
+    "expected_facts": [
+    {
+        "fact_type": "parameter_set",
+        "cwe": "None",
+        "origin": "P-256"
+    }
+    ],
+    "notes": "constant EC named-curve identifier resolves to P-256"
+},
+{
+    "id": "LOCAL-RSA-KEY-SIZE",
+    "source_url": "local fixture",
+    "binary": "corpus/build/rsa_keygen",
+    "expected_facts": [
+    {
+        "fact_type": "key_size",
+        "cwe": "None",
+        "origin": "2048"
+    }
+    ],
+    "notes": "RSA_generate_key_ex key-size operand resolves to 2048"
+},
+{
+    "id": "LOCAL-MLKEM-WEAK-RANDOMNESS",
+    "source_url": "local fixture",
+    "binary": "corpus/fixtures/mlkem_weak_randomness/mlkem_weak_randomness",
+    "expected_facts": [
+    {
+        "fact_type": "parameter_set",
+        "cwe": "None",
+        "origin": "ML-KEM-768"
+    },
+    {
+        "fact_type": "weak_randomness",
+        "cwe": "CWE-338",
+        "origin": "rand"
+    }
+    ],
+    "notes": "explicit derandomized encapsulation randomness is filled from rand()"
+},
+{
+    "id": "LOCAL-PQC-SIGNATURE-PARAMETERS",
+    "source_url": "local fixture",
+    "binary": "corpus/fixtures/pqc_signatures/pqc_signatures",
+    "expected_facts": [
+    {
+        "fact_type": "parameter_set",
+        "cwe": "None",
+        "origin": "ML-DSA-65"
+    },
+    {
+        "fact_type": "parameter_set",
+        "cwe": "None",
+        "origin": "SLH-DSA-SHA2-128s"
+    }
+    ],
+    "notes": "resolved API symbols prove ML-DSA-65 and SLH-DSA-SHA2-128s"
+},
+{
+    "id": "LOCAL-MD5-KNOWN-WEAK",
+    "source_url": "local fixture",
+    "binary": "corpus/build/digest_md5_strip",
+    "expected_facts": [
+    {
+        "fact_type": "known_weak_algorithm",
+        "cwe": "CWE-327"
+    }
+    ],
+    "notes": "resolved EVP digest selector proves MD5 use"
+},
+{
+    "id": "LOCAL-STATIC-ANCHOR-RECOVERY",
+    "source_url": "local fixture",
+    "binary": "corpus/build/static_anchor_target",
+    "fingerprint_reference": "corpus/build/static_anchor_reference",
+    "expected_facts": [
+    {
+        "fact_type": "ecb_mode",
+        "cwe": "CWE-327"
+    },
+    {
+        "fact_type": "hardcoded_key",
+        "cwe": "CWE-321"
+    }
+    ],
+    "notes": "independently linked stripped static archive with an unstripped matching-build reference"
+},
+{
+    "id": "LOCAL-AES-ECB-HARDCODED-KEY",
+    "source_url": "local fixture",
+    "binary": "corpus/build/aes_ecb_demo_strip",
+    "expected_facts": [
+    {
+        "fact_type": "ecb_mode",
+        "cwe": "CWE-327"
+    },
+    {
+        "fact_type": "hardcoded_key",
+        "cwe": "CWE-321"
+    }
+    ],
+    "notes": "local deterministic fixture; ECB plus hardcoded key"
+},
+{
+    "id": "LOCAL-AES-CBC-STATIC-IV",
+    "source_url": "local fixture",
+    "binary": "corpus/build/aes_cbc_static_iv_strip",
+    "expected_facts": [
+    {
+        "fact_type": "static_iv",
+        "cwe": "CWE-329"
+    },
+    {
+        "fact_type": "hardcoded_key",
+        "cwe": "CWE-321"
+    }
+    ],
+    "notes": "local deterministic fixture; static IV plus hardcoded key"
+},
+{
+    "id": "LOCAL-AES-WEAK-RNG",
+    "source_url": "local fixture",
+    "binary": "corpus/build/aes_weak_rng_key_strip",
+    "expected_facts": [
+    {
+        "fact_type": "weak_randomness",
+        "cwe": "CWE-338"
+    }
+    ],
+    "notes": "local deterministic fixture; same-function weak RNG heuristic"
+}
+]

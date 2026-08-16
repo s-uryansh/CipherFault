@@ -1,0 +1,79 @@
+{
+  "compiler_holdout_gcc_to_clang": {
+    "accuracy": 0.8649259868421053,
+    "confusion_matrix": [
+      [
+        87,
+        18,
+        105
+      ],
+      [
+        16,
+        330,
+        256
+      ],
+      [
+        88,
+        174,
+        3790
+      ]
+    ],
+    "f1_macro": 0.6483853333676258,
+    "precision_macro": 0.6669047647801095,
+    "recall_macro": 0.6325996814391864,
+    "test": 4864,
+    "train": 4885
+  },
+  "dataset_regions": 9749,
+  "function_disjoint": {
+    "accuracy": 0.9126373626373626,
+    "confusion_matrix": [
+      [
+        22,
+        7,
+        38
+      ],
+      [
+        2,
+        152,
+        55
+      ],
+      [
+        18,
+        39,
+        1487
+      ]
+    ],
+    "f1_macro": 0.7008610355942052,
+    "precision_macro": 0.7442085106642069,
+    "recall_macro": 0.6729046125941185,
+    "test": 1820,
+    "train": 7929
+  },
+  "model": "standard-scaled logistic regression over P-code histograms",
+  "source_holdout": {
+    "accuracy": 0.8364990689013035,
+    "confusion_matrix": [
+      [
+        39,
+        99,
+        94
+      ],
+      [
+        2,
+        330,
+        63
+      ],
+      [
+        83,
+        537,
+        4123
+      ]
+    ],
+    "f1_macro": 0.5393084678066239,
+    "precision_macro": 0.5398162642913006,
+    "recall_macro": 0.6242758440007266,
+    "test": 5370,
+    "train": 4379
+  }
+}

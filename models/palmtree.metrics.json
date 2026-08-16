@@ -1,0 +1,202 @@
+{
+  "asserted": {
+    "AES": 7,
+    "ML-KEM": 740,
+    "none": 4623
+  },
+  "dataset": "corpus/build/recognizer_palmtree_dataset.pt",
+  "false_positive_examples": [
+    {
+      "actual": "AES",
+      "function": "softaes_expand_key128",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_expand_key256",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "inv_mix_column",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_invert_key_schedule128",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_invert_key_schedule256",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "srm1r_subbytes",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "srm1r_mix_columns",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_block_encrypt",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_block_decrypt",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_block_decryptlast",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_expand_key128",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_expand_key256",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_invert_key_schedule128",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_invert_key_schedule256",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_expand_key256",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_invert_key_schedule128",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_invert_key_schedule256",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_block_encryptlast",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "inv_mix_column",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_invert_key_schedule128",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_invert_key_schedule256",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_block_encrypt",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_expand_key256",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "inv_mix_column",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    },
+    {
+      "actual": "AES",
+      "function": "softaes_invert_key_schedule128",
+      "predicted": "ML-KEM",
+      "source": "libsodium"
+    }
+  ],
+  "gate": {
+    "minimum_support": {
+      "AES": 100,
+      "ML-KEM": 100,
+      "none": 1000
+    },
+    "none_false_positive_rate": 0.01,
+    "primitive_precision": 0.95
+  },
+  "none_false_positive_rate": 0.07526881992816925,
+  "passed": false,
+  "precision": {
+    "AES": 1.0,
+    "ML-KEM": 0.4554054054054054,
+    "none": 0.9487345879299156
+  },
+  "recall": {
+    "AES": 0.03017241379310345,
+    "ML-KEM": 0.8531645569620253,
+    "none": 0.9247311827956989
+  },
+  "split": {
+    "held_out_sources": [
+      "liboqs",
+      "libpng",
+      "libsodium",
+      "mbedtls"
+    ],
+    "test": 5370,
+    "train": 2825,
+    "validation": 821
+  },
+  "support": {
+    "AES": 232,
+    "ML-KEM": 395,
+    "none": 4743
+  },
+  "temperature": 9.21968936920166,
+  "thresholds": {
+    "AES": 0.9999997615814209,
+    "ML-KEM": 0.4345591366291046
+  }
+}

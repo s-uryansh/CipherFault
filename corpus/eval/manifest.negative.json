@@ -1,0 +1,52 @@
+[
+  {
+    "id": "NEGATIVE-DYNAMIC-ECC-CURVE",
+    "binary": "corpus/build/ecc_curve_dynamic",
+    "expected_facts": [],
+    "forbidden_facts": [
+      {"fact_type": "parameter_set", "cwe": "None"}
+    ]
+  },
+  {
+    "id": "NEGATIVE-DYNAMIC-RSA-SIZE",
+    "binary": "corpus/build/rsa_keygen_dynamic",
+    "expected_facts": [],
+    "forbidden_facts": [
+      {"fact_type": "key_size", "cwe": "None"}
+    ]
+  },
+  {
+    "id": "NEGATIVE-SHA256-NOT-WEAK",
+    "binary": "corpus/build/digest_sha256_strip",
+    "expected_facts": [],
+    "forbidden_facts": [
+      {"fact_type": "known_weak_algorithm", "cwe": "CWE-327"}
+    ]
+  },
+  {
+    "id": "NEGATIVE-NON-AES-EVP",
+    "binary": "corpus/build/non_aes_evp_strip",
+    "expected_facts": [],
+    "forbidden_facts": [
+      {"fact_type": "hardcoded_key", "cwe": "CWE-321"},
+      {"fact_type": "static_iv", "cwe": "CWE-329"}
+    ]
+  },
+  {
+    "id": "NEGATIVE-AES-DYNAMIC-OPERANDS",
+    "binary": "corpus/build/aes_dynamic_operands_strip",
+    "expected_facts": [],
+    "forbidden_facts": [
+      {"fact_type": "hardcoded_key", "cwe": "CWE-321"},
+      {"fact_type": "static_iv", "cwe": "CWE-329"}
+    ]
+  },
+  {
+    "id": "NEGATIVE-UNRELATED-RAND",
+    "binary": "corpus/build/aes_unrelated_rand_strip",
+    "expected_facts": [],
+    "forbidden_facts": [
+      {"fact_type": "weak_randomness", "cwe": "CWE-338"}
+    ]
+  }
+]

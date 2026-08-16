@@ -1,0 +1,66 @@
+{
+  "asserted": {
+    "AES": 14,
+    "ML-KEM": 20,
+    "none": 3195
+  },
+  "dataset": "corpus/build/recognizer_dataset.pt",
+  "decision": "GNN prediction with semantic-head agreement >= 0.95",
+  "false_positive_examples": [],
+  "gate": {
+    "calibration_precision": 1.0,
+    "minimum_support": {
+      "AES": 100,
+      "ML-KEM": 100,
+      "none": 1000
+    },
+    "none_false_positive_rate": 0.01,
+    "primitive_precision": 0.95
+  },
+  "none_false_positive_rate": 0.0,
+  "passed": true,
+  "precision": {
+    "AES": 1.0,
+    "ML-KEM": 1.0,
+    "none": 0.8560250391236307
+  },
+  "recall": {
+    "AES": 0.07567567567567568,
+    "ML-KEM": 0.06472491909385113,
+    "none": 1.0
+  },
+  "split": {
+    "held_out_sources": [
+      "boringssl-aes",
+      "liboqs",
+      "libpng",
+      "libsodium"
+    ],
+    "test": 3229,
+    "train": 2219,
+    "validation": 1429,
+    "validation_sources": [
+      "PQClean",
+      "bearssl",
+      "mbedtls",
+      "tiny-AES-c",
+      "zlib"
+    ]
+  },
+  "support": {
+    "AES": 185,
+    "ML-KEM": 309,
+    "none": 2735
+  },
+  "temperature": 5.825911521911621,
+  "thresholds": {
+    "AES": 0.9297489523887634,
+    "ML-KEM": 0.7185177206993103
+  },
+  "validation_selection": [
+    1,
+    0.020833333333333332,
+    -0.0,
+    -1.932927131652832
+  ]
+}

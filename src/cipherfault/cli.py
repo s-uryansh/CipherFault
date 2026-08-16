@@ -3,47 +3,85 @@
 import argparse
 import json
 from pathlib import Path
+import sys
 
-from .cbom import findings_to_cbom
-from .scanner import findings_as_dicts, scan_binary
+from . import __version__
+from .cbom import report_to_cbom
+from .scanner import scan_binary
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="cipherfault")
+    parser = argparse.ArgumentParser(
+        prog="cipherfault",
+        description="Extract evidence from cooperative x86_64/AArch64 ELF binaries; no exploitability claim.",
+        epilog="Posture: recognizer precision-tuned; rules recall-tuned; analysis is neither sound nor complete.",
+    )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     scan = sub.add_parser("scan", help="scan a binary for verified crypto facts")
     scan.add_argument("binary", type=Path)
-    out = scan.add_mutually_exclusive_group()
-    out.add_argument("--json", action="store_true", help="emit JSON findings")
-    out.add_argument("--cbom", action="store_true", help="emit CycloneDX JSON")
+    scan.add_argument(
+        "--fingerprint-reference",
+        type=Path,
+        help="unstripped matching build used to recover names in a stripped static binary",
+    )
+    scan.add_argument(
+        "--format",
+        choices=("text", "json", "cbom"),
+        default="text",
+        help="output format",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "scan":
-        findings = scan_binary(args.binary)
-        if args.cbom:
+        try:
+            report = scan_binary(args.binary, fingerprint_reference=args.fingerprint_reference)
+        except Exception as exc:
+            print(f"cipherfault: analysis failed: {exc}", file=sys.stderr)
+            return 1
+        if args.format == "cbom":
             print(
                 json.dumps(
-                    findings_to_cbom(findings, str(args.binary)),
+                    report_to_cbom(report),
                     indent=2,
                     sort_keys=True,
                 )
             )
-        elif args.json:
+        elif args.format == "json":
             print(
                 json.dumps(
-                    {"findings": findings_as_dicts(findings)},
+                    report.to_dict(),
                     indent=2,
                     sort_keys=True,
                 )
             )
         else:
-            for finding in findings_as_dicts(findings):
+            for primitive in report.primitives:
                 print(
-                    f"{finding['tier']} {finding['cwe']} "
+                    f"PRIMITIVE {primitive.primitive} {primitive.address} "
+                    f"via {primitive.method}"
+                )
+            for candidate in report.recognition_candidates:
+                print(
+                    f"CANDIDATE {candidate.primitive} {candidate.address} "
+                    f"confidence={candidate.confidence:.3f} via {candidate.method}"
+                )
+            for finding in report.to_dict()["verified_facts"]:
+                cwe = f" {finding['cwe']}" if finding["cwe"] else ""
+                print(
+                    f"{finding['tier']}{cwe} "
                     f"{finding['function']}@{finding['call_addr']}: "
                     f"{finding['summary']}"
                 )
+            for indicator in report.indicators:
+                print(
+                    f"INDICATOR {indicator.function}@{','.join(indicator.addresses)}: "
+                    f"{indicator.pattern}; {indicator.analyst_question}"
+                )
+            for diagnostic in report.diagnostics:
+                location = f" @{diagnostic.address}" if diagnostic.address else ""
+                print(f"DIAGNOSTIC {diagnostic.code}{location}: {diagnostic.message}")
         return 0
 
     parser.error(f"unknown command: {args.command}")

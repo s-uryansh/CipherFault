@@ -1,0 +1,278 @@
+#!/usr/bin/env python3
+"""Train and gate the classical/PQC primitive region recognizer."""
+
+from __future__ import annotations
+
+import collections
+import argparse
+import json
+import random
+import sys
+from pathlib import Path
+
+import joblib
+import numpy as np
+import torch
+import torch.nn.functional as F
+from sklearn.ensemble import ExtraTreesClassifier
+from torch_geometric.loader import DataLoader
+from torch.utils.data import WeightedRandomSampler
+
+sys.path.insert(0, "src")
+
+from cipherfault.recognizer.model import PrimitiveGraphSAGE
+from cipherfault.recognizer.featurize import graph_summary
+
+
+ROOT = Path(__file__).resolve().parents[1]
+MODEL_DIR = ROOT / "models"
+LABELS = {0: "AES", 1: "RSA", 2: "ECC", 3: "SHA", 4: "ML-KEM", 5: "ML-DSA", 6: "SLH-DSA", 7: "none"}
+NONE_ID = 7
+PRIMITIVE_IDS = tuple(range(NONE_ID))
+VALIDATION_SOURCES = {
+    "tiny-AES-c", "mbedtls", "bearssl", "PQClean", "zlib",
+    "bearssl-rsa", "bearssl-ecc", "bearssl-sha", "PQClean-ML-DSA", "PQClean-SLH-DSA",
+}
+TEST_SOURCES = {
+    "libsodium", "boringssl-aes", "liboqs", "libpng",
+    "boringssl-rsa", "boringssl-ecc", "boringssl-sha", "liboqs-ML-DSA", "liboqs-SLH-DSA",
+}
+MIN_SUPPORT = {**{label: 100 for label in PRIMITIVE_IDS}, NONE_ID: 1000}
+CALIBRATION_PRECISION = 1.0
+SEMANTIC_VETO_THRESHOLD = 0.95
+SEED = 17
+
+
+def source_balanced_weights(dataset) -> list[float]:
+    counts = collections.Counter((graph.source, int(graph.y.item())) for graph in dataset)
+    return [1.0 / counts[(graph.source, int(graph.y.item()))] for graph in dataset]
+
+
+def ensemble_predictions(gnn_probabilities, semantic_probabilities, thresholds):
+    predicted = predictions(gnn_probabilities, thresholds)
+    for index, primitive in enumerate(predicted):
+        if primitive == NONE_ID or semantic_probabilities[index, primitive] < SEMANTIC_VETO_THRESHOLD:
+            predicted[index] = NONE_ID
+    return predicted
+
+
+def scores(model, dataset, device):
+    logits, labels = [], []
+    model.eval()
+    with torch.no_grad():
+        for batch in DataLoader(dataset, batch_size=64):
+            batch = batch.to(device)
+            logits.append(model(batch.x, batch.edge_index, batch.edge_type, batch.batch).cpu())
+            labels.append(batch.y.cpu())
+    return torch.cat(logits), torch.cat(labels)
+
+
+def calibrate_temperature(logits, labels) -> float:
+    log_temperature = torch.zeros(1, requires_grad=True)
+    optimizer = torch.optim.LBFGS([log_temperature], lr=0.1, max_iter=50)
+
+    def closure():
+        optimizer.zero_grad()
+        loss = F.cross_entropy(logits / log_temperature.exp(), labels)
+        loss.backward()
+        return loss
+
+    optimizer.step(closure)
+    return float(log_temperature.exp().detach().clamp(0.05, 20.0).item())
+
+
+def choose_threshold(probabilities, labels, primitive: int) -> float:
+    candidates = sorted(set(float(value) for value in probabilities[:, primitive]), reverse=True)
+    best = 1.1
+    for threshold in candidates:
+        asserted = probabilities[:, primitive] >= threshold
+        count = int(asserted.sum())
+        if count and float((labels[asserted] == primitive).float().mean()) >= CALIBRATION_PRECISION:
+            best = threshold
+    return best
+
+
+def predictions(probabilities, thresholds):
+    primitive_scores, primitive_ids = probabilities[:, :NONE_ID].max(dim=1)
+    return torch.tensor([
+        int(primitive) if float(score) >= thresholds[int(primitive)] else NONE_ID
+        for score, primitive in zip(primitive_scores, primitive_ids)
+    ])
+
+
+def metrics(labels, predicted):
+    result = {"support": {}, "asserted": {}, "precision": {}, "recall": {}}
+    for label, name in LABELS.items():
+        actual = labels == label
+        asserted = predicted == label
+        tp = int((actual & asserted).sum())
+        result["support"][name] = int(actual.sum())
+        result["asserted"][name] = int(asserted.sum())
+        result["precision"][name] = tp / int(asserted.sum()) if asserted.any() else 0.0
+        result["recall"][name] = tp / int(actual.sum()) if actual.any() else 0.0
+    none = labels == NONE_ID
+    result["none_false_positive_rate"] = float(((predicted != NONE_ID) & none).sum() / none.sum())
+    return result
+
+
+def sliced_metrics(graphs, labels, predicted, attribute):
+    return {
+        value: metrics(labels[indexes], predicted[indexes])
+        for value in sorted({getattr(graph, attribute) for graph in graphs})
+        for indexes in [[index for index, graph in enumerate(graphs) if getattr(graph, attribute) == value]]
+    }
+
+
+def operating_score(logits, labels, semantic_probabilities):
+    probabilities = logits.softmax(dim=1)
+    thresholds = {label: choose_threshold(probabilities, labels, label) for label in PRIMITIVE_IDS}
+    result = metrics(labels, ensemble_predictions(probabilities, semantic_probabilities, thresholds))
+    qualified = sum(result["precision"][LABELS[label]] >= CALIBRATION_PRECISION for label in PRIMITIVE_IDS)
+    recall = sum(
+        result["recall"][LABELS[label]]
+        for label in PRIMITIVE_IDS
+        if result["precision"][LABELS[label]] >= CALIBRATION_PRECISION
+    )
+    return qualified, recall, -result["none_false_positive_rate"]
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", default="corpus/build/recognizer_dataset.pt")
+    parser.add_argument("--name", default="recognizer")
+    args = parser.parse_args()
+    random.seed(SEED)
+    torch.manual_seed(SEED)
+    torch.use_deterministic_algorithms(True)
+    dataset = torch.load(ROOT / args.dataset, weights_only=False)
+    train = [graph for graph in dataset if graph.source not in VALIDATION_SOURCES | TEST_SOURCES]
+    validation = [graph for graph in dataset if graph.source in VALIDATION_SOURCES]
+    test = [graph for graph in dataset if graph.source in TEST_SOURCES]
+    if not train or not validation or not test:
+        raise SystemExit("empty train/validation/test split")
+    split_sources = [{graph.source for graph in split} for split in (train, validation, test)]
+    if any(left & right for index, left in enumerate(split_sources) for right in split_sources[index + 1:]):
+        raise SystemExit("source-family leakage across train, validation, and test")
+
+    semantic_head = ExtraTreesClassifier(
+        n_estimators=300, min_samples_leaf=2, random_state=SEED, n_jobs=-1
+    ).fit(np.stack([graph_summary(graph) for graph in train]), [int(graph.y.item()) for graph in train])
+    validation_semantic = torch.tensor(
+        semantic_head.predict_proba(np.stack([graph_summary(graph) for graph in validation])),
+        dtype=torch.float,
+    )
+
+    device = torch.device("cpu")
+    model = PrimitiveGraphSAGE(train[0].x.shape[1], classes=len(LABELS)).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.003, weight_decay=1e-4)
+    sampler = WeightedRandomSampler(
+        source_balanced_weights(train), len(train), replacement=True,
+        generator=torch.Generator().manual_seed(SEED),
+    )
+    loader = DataLoader(
+        train,
+        batch_size=32,
+        sampler=sampler,
+    )
+    best_state = None
+    best_selection = (-1, -1.0, -1.0, float("-inf"))
+    for epoch in range(100):
+        model.train()
+        for batch in loader:
+            batch = batch.to(device)
+            optimizer.zero_grad()
+            loss = F.cross_entropy(
+                model(batch.x, batch.edge_index, batch.edge_type, batch.batch),
+                batch.y,
+            )
+            loss.backward()
+            optimizer.step()
+        validation_logits, validation_labels = scores(model, validation, device)
+        validation_loss = float(F.cross_entropy(validation_logits, validation_labels))
+        selection = (*operating_score(validation_logits, validation_labels, validation_semantic), -validation_loss)
+        if selection > best_selection:
+            best_selection = selection
+            best_state = {name: value.detach().clone() for name, value in model.state_dict().items()}
+        if (epoch + 1) % 10 == 0:
+            print(
+                f"epoch={epoch + 1} loss={float(loss):.4f} validation_loss={validation_loss:.4f}",
+                flush=True,
+            )
+
+    model.load_state_dict(best_state)
+    validation_logits, validation_labels = scores(model, validation, device)
+    temperature = calibrate_temperature(validation_logits, validation_labels)
+    validation_probabilities = (validation_logits / temperature).softmax(dim=1)
+    thresholds = {label: choose_threshold(validation_probabilities, validation_labels, label) for label in PRIMITIVE_IDS}
+    test_logits, test_labels = scores(model, test, device)
+    test_semantic = torch.tensor(
+        semantic_head.predict_proba(np.stack([graph_summary(graph) for graph in test])),
+        dtype=torch.float,
+    )
+    test_predictions = ensemble_predictions(
+        (test_logits / temperature).softmax(dim=1), test_semantic, thresholds
+    )
+    result = metrics(test_labels, test_predictions)
+    result["slices"] = {
+        attribute: sliced_metrics(test, test_labels, test_predictions, attribute)
+        for attribute in ("arch", "compiler", "opt")
+    }
+    result["false_positive_examples"] = [
+        {"predicted": LABELS[int(prediction)], "actual": LABELS[int(label)], "source": graph.source, "function": graph.function}
+        for graph, label, prediction in zip(test, test_labels, test_predictions)
+        if prediction != NONE_ID and prediction != label
+    ][:25]
+    result.update({
+        "gate": {
+            "primitive_precision": 0.95, "calibration_precision": CALIBRATION_PRECISION,
+            "none_false_positive_rate": 0.01,
+            "minimum_support": {LABELS[k]: v for k, v in MIN_SUPPORT.items()},
+        },
+        "split": {
+            "train": len(train), "validation": len(validation), "test": len(test),
+            "validation_sources": sorted(VALIDATION_SOURCES), "held_out_sources": sorted(TEST_SOURCES),
+        },
+        "temperature": temperature,
+        "decision": f"GNN prediction with semantic-head agreement >= {SEMANTIC_VETO_THRESHOLD}",
+        "validation_selection": best_selection,
+        "thresholds": {LABELS[k]: v for k, v in thresholds.items()},
+    })
+    passed = (
+        all(result["support"][LABELS[k]] >= required for k, required in MIN_SUPPORT.items())
+        and all(result["precision"][LABELS[k]] >= 0.95 for k in PRIMITIVE_IDS)
+        and result["none_false_positive_rate"] <= 0.01
+    )
+    result["passed"] = passed
+
+    MODEL_DIR.mkdir(exist_ok=True)
+    result["dataset"] = args.dataset
+    (MODEL_DIR / f"{args.name}.metrics.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    card = MODEL_DIR / ("MODEL_CARD.md" if args.name == "recognizer" else f"{args.name}.MODEL_CARD.md")
+    card.write_text(
+        "# CipherFault primitive recognizer\n\n"
+        f"Deployment gate: **{'PASS' if passed else 'FAIL'}**.\n\n"
+        "The model recognizes AES, RSA, ECC, SHA, ML-KEM, ML-DSA, and SLH-DSA regions in cooperative x86_64 and AArch64 ELF binaries. "
+        f"Evaluation holds out {', '.join(sorted(TEST_SOURCES))} by source project. Confidence is "
+        f"temperature-scaled on held-out {', '.join(sorted(VALIDATION_SOURCES))} projects. It is not calibrated "
+        "for distribution shift, obfuscation, or adversarial binaries.\n\n"
+        "Held-out primitive precision: "
+        + ", ".join(f"{LABELS[label]}={result['precision'][LABELS[label]]:.3f}" for label in PRIMITIVE_IDS)
+        + "; "
+        f"`none` false-positive rate: {result['none_false_positive_rate']:.3f}.\n\n"
+        "The deployment gate, complete metrics, thresholds, support, and split are recorded in "
+        "`recognizer.metrics.json`. The linear control is recorded in `baseline.metrics.json`.\n"
+    )
+    deployable = MODEL_DIR / f"{args.name}.pt"
+    semantic_path = MODEL_DIR / f"{args.name}.semantic.joblib"
+    if passed:
+        torch.save({"state_dict": model.cpu().state_dict(), "input_dim": train[0].x.shape[1], "classes": len(LABELS), "labels": LABELS, "temperature": temperature, "thresholds": thresholds}, deployable)
+        joblib.dump(semantic_head, semantic_path)
+    else:
+        deployable.unlink(missing_ok=True)
+        semantic_path.unlink(missing_ok=True)
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0 if passed else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

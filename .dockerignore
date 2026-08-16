@@ -1,0 +1,12 @@
+.git
+.github
+.venv
+build
+corpus/build
+corpus/external
+dist
+models
+reports
+__pycache__
+*.pyc
+*.pt

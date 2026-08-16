@@ -1,22 +1,20 @@
-"""
-Partition a function's CFG into candidate regions (one ~= one primitive)
-Structure-based: each non trivial loop (SCC) becomes a region
-"""
+"""Extract loop-centered sub-function recognition regions."""
 
 import networkx as nx
 from ..lifting.types import LiftedFunction
 
 def extract_regions(lf: LiftedFunction) -> list[set[str]]:
-    """
-    Returns a list of regions; each region is a set of block addresses.
-    """
-    regions: list[set[str]] = []
+    """Return each loop SCC with its immediate CFG setup/exit context."""
+    regions: set[frozenset[str]] = set()
 
     for scc in nx.strongly_connected_components(lf.cfg):
-        if len(scc) > 1:
-            regions.append(set(scc))
-        else:
+        if len(scc) == 1:
             (node,) = tuple(scc)
-            if node in lf.cfg.successors(node):
-                regions.append({node})
-    return regions
+            if not lf.cfg.has_edge(node, node):
+                continue
+        region = set(scc)
+        for node in scc:
+            region.update(lf.cfg.predecessors(node))
+            region.update(lf.cfg.successors(node))
+        regions.add(frozenset(region))
+    return [set(region) for region in sorted(regions, key=lambda item: tuple(sorted(item)))]

@@ -1,15 +1,56 @@
-corpus/build/
-*.o
-*.out
-*.exe
-*.pt
+# Virtual environments and Python caches
 .venv/
-.pytest_cache/
+venv/
 __pycache__/
 *.py[cod]
 *.egg-info/
-dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Build and package output
 build/
+dist/
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.out
+*.pt
+*.log
+*.tmp
+
+# CipherFault generated/downloaded data
+corpus/build/
+corpus/external/
+corpus/toolchains/
+corpus/eval/**/source/
+corpus/eval/**/target_*
+reports/
+
+# Keep model documentation and metrics, not binary checkpoints
+models/*.pt
+models/*.joblib
+
+# Ghidra projects
 *_ghidra/
 *.gpr
 *.rep/
+
+# Locally built fixture executables without an extension
+corpus/fixtures/mlkem_api/mlkem_api
+corpus/fixtures/pqc_signatures/pqc_signatures
+corpus/fixtures/mlkem_weak_randomness/mlkem_weak_randomness
+
+# Editors and operating-system metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*~

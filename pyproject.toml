@@ -7,6 +7,7 @@ name = "cipherfault"
 version = "0.1.0"
 description = "Crypto-usage evidence engine for compiled software"
 readme = "README.md"
+license = {file = "LICENSE"}
 requires-python = ">=3.13"
 dependencies = [
     "networkx",
@@ -15,9 +16,18 @@ dependencies = [
 
 [project.optional-dependencies]
 recognizer = [
+    "pyelftools>=0.33",
+    "tabulate",
     "torch",
     "torch-geometric",
     "scikit-learn",
+]
+dev = [
+    "build>=1.3",
+    "jsonschema>=4.23",
+    "pytest>=9",
+    "pyelftools>=0.33",
+    "tabulate",
 ]
 
 [project.scripts]
@@ -25,3 +35,6 @@ cipherfault = "cipherfault.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
