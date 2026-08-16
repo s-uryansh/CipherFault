@@ -180,6 +180,7 @@ def function_tokens(program, function) -> tuple[str, ...]:
             for index in range(instruction.getNumOperands())
         )
         for instruction in listing.getInstructions(function.getBody(), True)
+        if instruction.getMnemonicString() not in {"ENDBR32", "ENDBR64"}
     )
 
 

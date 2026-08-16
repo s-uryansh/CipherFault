@@ -269,7 +269,7 @@ def copied_source_reaching_pointer(
 
 
 def constant_buffer_reaching_pointer(
-    pointer, high, program, resolved_names=None, before_address=None
+    pointer, high, program, resolved_names=None, before_address=None, required_size=16
 ):
     """Prove a constant byte fill reaches the operand buffer."""
     from ghidra.program.model.pcode import PcodeOp
@@ -287,10 +287,12 @@ def constant_buffer_reaching_pointer(
         if not target_bases.intersection(_pointer_bases(op.getInput(1), set())):
             continue
         value, size = op.getInput(2), op.getInput(3)
-        if value.isConstant() and size.isConstant() and size.getOffset() > 0:
+        if value.isConstant() and size.isConstant() and size.getOffset() >= required_size:
             matches.append(op)
     if not matches:
-        return None
+        return _constant_stack_writes_reaching_pointer(
+            pointer, high, before_address, required_size
+        )
     op = max(matches, key=_op_offset)
     if _has_later_buffer_write(
         pointer, high, program, resolved_names, _op_offset(op), before_address
@@ -301,6 +303,42 @@ def constant_buffer_reaching_pointer(
     path = ProvenancePath(terminal="CONST", origin=origin)
     path.add(Step("CONST_BUFFER", origin, str(op.getInput(1))))
     path.add(Step("OPERAND", "constant-filled buffer reaches operand", str(pointer)))
+    return path
+
+
+def _constant_stack_writes_reaching_pointer(pointer, high, before_address, required_size):
+    """Recognize memcpy/memset lowered by the compiler to stack assignments."""
+    from ghidra.program.model.pcode import PcodeOp
+
+    start = _stack_pointer_offset(pointer, set())
+    if start is None:
+        return None
+    covered = set()
+    evidence = []
+    for op in high.getPcodeOps():
+        if op.getOpcode() != PcodeOp.COPY or not _before(op, before_address):
+            continue
+        output = op.getOutput()
+        span = _stack_span(output)
+        if span is None:
+            continue
+        write_start, write_size = span
+        overlap = range(max(start, write_start), min(start + required_size, write_start + write_size))
+        overlap = set(overlap)
+        if not overlap:
+            continue
+        value = op.getInput(0)
+        if value.isConstant():
+            covered.update(overlap)
+            evidence.append(str(op.getSeqnum().getTarget()))
+        else:
+            covered.difference_update(overlap)
+    if len(covered) != required_size:
+        return None
+    origin = f"constant stack writes ({required_size} bytes)"
+    path = ProvenancePath(terminal="CONST", origin=origin)
+    path.add(Step("CONST_BUFFER", origin, ", ".join(evidence)))
+    path.add(Step("OPERAND", "constant-filled stack buffer reaches operand", str(pointer)))
     return path
 
 
@@ -315,6 +353,8 @@ def _has_later_buffer_write(
         offset = _op_offset(op)
         if offset <= after_offset or not _before(op, before_address):
             continue
+        if op.getOpcode() == PcodeOp.COPY and _stack_write_overlaps(pointer, op.getOutput()):
+            return True
         if op.getOpcode() == PcodeOp.STORE and op.getNumInputs() > 1:
             if target_bases.intersection(_pointer_bases(op.getInput(1), set())):
                 return True
@@ -327,6 +367,45 @@ def _has_later_buffer_write(
             if index == 1 or callee in RNG_SOURCES | {"memcpy", "memmove", "memset"}:
                 return True
     return False
+
+
+def _stack_write_overlaps(pointer, output, size=16):
+    start = _stack_pointer_offset(pointer, set())
+    span = _stack_span(output)
+    if start is None or span is None:
+        return False
+    write_start, write_size = span
+    return write_start < start + size and start < write_start + write_size
+
+
+def _stack_span(vn):
+    if vn is None:
+        return None
+    address = vn.getAddress()
+    if not address.getAddressSpace().isStackSpace():
+        return None
+    return int(address.getOffset()), int(vn.getSize())
+
+
+def _stack_pointer_offset(vn, seen):
+    from ghidra.program.model.pcode import PcodeOp
+
+    key = str(vn)
+    if key in seen:
+        return None
+    seen.add(key)
+    span = _stack_span(vn)
+    if span is not None:
+        return span[0]
+    definition = vn.getDef()
+    if definition is None:
+        return None
+    if definition.getOpcode() == PcodeOp.PTRSUB and definition.getNumInputs() > 1:
+        offset = definition.getInput(1)
+        return int(offset.getOffset()) if offset.isConstant() else None
+    if definition.getOpcode() not in {PcodeOp.COPY, PcodeOp.CAST, PcodeOp.INDIRECT}:
+        return None
+    return _stack_pointer_offset(definition.getInput(0), seen)
 
 
 def _op_offset(op):

@@ -142,7 +142,7 @@ def test_key_copied_from_static_storage_has_verified_provenance():
     report = scan_binary(COPIED_KEY_FIXTURE)
 
     key = next(finding for finding in report.verified_facts if finding.fact_type == "hardcoded_key")
-    assert any(step["kind"] == "BUFFER_COPY" for step in key.provenance)
+    assert {step["kind"] for step in key.provenance} & {"BUFFER_COPY", "CONST_BUFFER"}
 
 
 @pytest.mark.skipif(not os.path.exists(IGNORED_VERIFY_FIXTURE), reason="fixture not built")
@@ -191,7 +191,7 @@ def test_later_constant_write_replaces_rng_provenance():
 
     assert "operand_origin" not in _fact_types(report.verified_facts)
     key = next(item for item in report.verified_facts if item.fact_type == "hardcoded_key")
-    assert key.origin == "memset(0x0, 16 bytes)"
+    assert key.origin in {"memset(0x0, 16 bytes)", "constant stack writes (16 bytes)"}
 
 
 @pytest.mark.skipif(not os.path.exists(LOW_LEVEL_AES_FIXTURE), reason="fixture not built")

@@ -1,5 +1,5 @@
 CC ?= gcc
-CFLAGS ?= -O1 -g -fno-omit-frame-pointer -fno-builtin-memset
+CFLAGS ?= -O1 -g -fno-omit-frame-pointer
 OUT := ../../build
 
 all: $(OUT)/aes_rng_overwritten_strip
