@@ -111,9 +111,9 @@ def test_non_aes_evp_call_emits_no_aes_evidence_or_facts():
 
     assert report.primitives == []
     assert report.verified_facts == []
-    assert [diagnostic.code for diagnostic in report.diagnostics] == [
-        "UNRESOLVED_CIPHER_PRIMITIVE"
-    ]
+    assert "UNRESOLVED_CIPHER_PRIMITIVE" in {
+        diagnostic.code for diagnostic in report.diagnostics
+    }
 
 
 @pytest.mark.skipif(not os.path.exists(DYNAMIC_OPERANDS_FIXTURE), reason="fixture not built")

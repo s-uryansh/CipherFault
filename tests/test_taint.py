@@ -1,5 +1,8 @@
 """Regression: key operand must resolve to .rodata 0x102010 on both fixtures."""
 import sys, os
+
+import pytest
+
 sys.path.insert(0, "src")
 from cipherfault.taint.anchors import find_anchors
 from cipherfault.taint.tracer import trace_operand
@@ -10,6 +13,7 @@ EXPECT_ORIGIN = "0x102010"
 FIXTURES = ["corpus/build/aes_ecb_demo_strip", "corpus/build/aes_ecb_ip_strip"]
 
 
+@pytest.mark.skipif(not os.environ.get("GHIDRA_INSTALL_DIR"), reason="Ghidra not configured")
 def test_weak_source_uses_recovered_static_name():
     import pyghidra
 

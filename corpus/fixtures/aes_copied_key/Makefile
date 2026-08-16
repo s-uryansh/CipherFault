@@ -1,5 +1,5 @@
 CC ?= gcc
-CFLAGS ?= -O1 -g -fno-builtin-memcpy
+CFLAGS ?= -O1 -g -fno-omit-frame-pointer -fno-builtin-memcpy
 OUT := ../../build
 
 all: $(OUT)/aes_copied_key_strip

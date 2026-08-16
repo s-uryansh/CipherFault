@@ -140,7 +140,7 @@ def match_fingerprints(functions, catalog: dict[str, tuple[str, ...]]) -> dict[s
             continue
         best, name = scored[0]
         runner_up = scored[1][0] if len(scored) > 1 else 0.0
-        if best >= 0.85 and best - runner_up >= 0.05:
+        if best >= 0.80 and best - runner_up >= 0.05:
             proposals[name].append(function.name)
     return {names[0]: name for name, names in proposals.items() if len(names) == 1}
 
