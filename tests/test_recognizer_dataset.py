@@ -2,9 +2,8 @@ import sys
 
 import networkx as nx
 import pytest
-import torch
 
-pytest.importorskip("torch")
+torch = pytest.importorskip("torch")
 pytest.importorskip("torch_geometric")
 
 sys.path.insert(0, "src")
