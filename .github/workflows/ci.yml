@@ -50,7 +50,7 @@ jobs:
       - run: python scripts/evaluate_manifest.py corpus/eval/manifest.negative.json
         env:
           GHIDRA_INSTALL_DIR: ${{ runner.tool_cache }}/ghidra_12.1.2_PUBLIC
-      - run: python -m build --no-isolation --wheel --outdir "${{ runner.temp }}/wheels"
+      - run: python -m build --wheel --outdir "${{ runner.temp }}/wheels"
       - run: python -m pip install --no-deps --target "${{ runner.temp }}/installed" "${{ runner.temp }}"/wheels/*.whl
       - run: python -m cipherfault.cli --version
         env:
