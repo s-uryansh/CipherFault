@@ -8,7 +8,12 @@ sys.path.insert(0, "src")
 
 pytest.importorskip("pyghidra")
 
-from cipherfault.scanner import _validate_target, primitive_from_cipher_selector, scan_binary
+from cipherfault.scanner import (
+    _recognizer_artifacts_available,
+    _validate_target,
+    primitive_from_cipher_selector,
+    scan_binary,
+)
 from cipherfault.taint.anchors import anchor_spec
 
 
@@ -59,6 +64,24 @@ def test_only_aes_cipher_selectors_prove_aes():
 
 def test_generic_evp_anchor_does_not_claim_a_primitive():
     assert anchor_spec("EVP_EncryptInit_ex")["primitive"] is None
+
+
+def test_uboot_cbc_helper_has_implicit_iv_not_src_operand():
+    spec = anchor_spec("aes_cbc_encrypt_blocks")
+
+    assert spec["variant"] == "AES-CBC"
+    assert spec["operands"] == {"key": 1}
+
+
+def test_recognizer_artifact_check_requires_model_and_semantic_head(tmp_path):
+    model = tmp_path / "recognizer.pt"
+    semantic = tmp_path / "recognizer.semantic.joblib"
+
+    assert _recognizer_artifacts_available(model)[0] is False
+    model.write_bytes(b"checkpoint")
+    assert _recognizer_artifacts_available(model)[0] is False
+    semantic.write_bytes(b"semantic")
+    assert _recognizer_artifacts_available(model)[0] is True
 
 
 @pytest.mark.parametrize("machine", [62, 183])

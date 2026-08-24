@@ -3,6 +3,7 @@ FROM python:3.13-slim
 ARG GHIDRA_VERSION=12.1.2
 ARG GHIDRA_BUILD=20260605
 ARG GHIDRA_SHA256=b62e81a0390618466c019c60d8c2f796ced2509c4c1aea4a37644a77272cf99d
+ARG CIPHERFAULT_INSTALL_TARGET=.
 ENV GHIDRA_INSTALL_DIR=/opt/ghidra \
     PYTHONUNBUFFERED=1
 
@@ -17,7 +18,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY . .
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir "$CIPHERFAULT_INSTALL_TARGET"
 
 ENTRYPOINT ["cipherfault"]
 CMD ["--help"]

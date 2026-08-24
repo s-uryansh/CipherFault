@@ -25,6 +25,19 @@ def test_repeated_iv_is_an_indicator_question_not_a_verified_fact():
     assert indicators[0].analyst_question.endswith("?")
 
 
+def test_repeated_low_level_aes_iv_is_an_indicator_question():
+    anchors = [
+        SimpleNamespace(primitive="AES", func_name="encrypt", call_addr=address, operands={"iv": Value()})
+        for address in ("1000", "1010")
+    ]
+
+    indicators = repeated_operand_indicators(anchors)
+
+    assert len(indicators) == 1
+    assert indicators[0].primitive == "AES"
+    assert indicators[0].operand == "iv"
+
+
 def test_rng_quality_stays_an_analyst_question():
     from cipherfault.indicators import rng_quality_indicator
 

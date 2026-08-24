@@ -1,3 +1,5 @@
+# Local development freeze. Prefer `python -m pip install -e ".[dev]"` for
+# fresh setup; CUDA-specific torch wheels may require a matching PyTorch index.
 aiohappyeyeballs==2.6.2
 aiohttp==3.14.1
 aiosignal==1.4.0
@@ -5,7 +7,6 @@ attrs==26.1.0
 build==1.5.0
 certifi==2026.5.20
 charset-normalizer==3.4.7
--e git+ssh://git@github.com/s-uryansh/CipherFault.git@f5ee8f34a45db5ce2748d25e9931a5c9f809b3e4#egg=cipherfault
 filelock==3.29.0
 frozenlist==1.8.0
 fsspec==2026.4.0

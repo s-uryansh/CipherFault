@@ -4,7 +4,7 @@ from types import SimpleNamespace
 sys.path.insert(0, "src")
 
 from cipherfault import rules
-from cipherfault.rules import hardcoded_key_finding, parameter_set_finding
+from cipherfault.rules import hardcoded_key_finding, implicit_zero_iv_finding, parameter_set_finding
 from cipherfault.taint.tracer import ProvenancePath, Step
 from cipherfault.rules import ecb_mode_finding
 
@@ -150,3 +150,24 @@ def test_rng_operand_origin_is_fact_but_quality_is_not_claimed():
     assert finding.cwe is None
     assert finding.fact_type == "operand_origin"
     assert "not asserted" in finding.analyst_note
+
+
+def test_uboot_style_cbc_helper_emits_implicit_zero_iv_fact():
+    anchor = SimpleNamespace(
+        func_name="do_aes",
+        callee="aes_cbc_encrypt_blocks",
+        call_addr="00102000",
+    )
+
+    finding = implicit_zero_iv_finding(anchor)
+
+    assert finding.fact_type == "static_iv"
+    assert finding.cwe == "CWE-329"
+    assert finding.origin == "implicit all-zero IV"
+    assert finding.provenance == [
+        {
+            "kind": "IMPLICIT_CONST",
+            "detail": "CBC chain data initialized to all-zero block inside callee",
+            "varnode": "aes_cbc_encrypt_blocks",
+        }
+    ]

@@ -101,9 +101,16 @@ def _asset(report: AnalysisReport, primitive: PrimitiveEvidence) -> dict:
         "primitive": kind,
         "implementationPlatform": report.target_arch,
     }
-    if primitive.variant:
+    if primitive.variant and not _mode(primitive):
         algorithm["parameterSetIdentifier"] = primitive.variant
-    mode = next((fact.origin.rsplit("_", 1)[-1].lower() for fact in report.verified_facts if fact.call_addr == primitive.address and fact.fact_type == "ecb_mode"), None)
+    mode = _mode(primitive) or next(
+        (
+            _mode_name(fact.origin)
+            for fact in report.verified_facts
+            if fact.call_addr == primitive.address and fact.fact_type == "ecb_mode"
+        ),
+        None,
+    )
     if mode:
         algorithm["mode"] = mode
     return {
@@ -122,3 +129,17 @@ def _asset(report: AnalysisReport, primitive: PrimitiveEvidence) -> dict:
             {"name": "cipherfault:indicators", "value": json.dumps(indicators, sort_keys=True)},
         ],
     }
+
+
+def _mode(primitive: PrimitiveEvidence) -> str | None:
+    if primitive.variant and primitive.variant.upper().startswith("AES-"):
+        return primitive.variant.rsplit("-", 1)[-1].lower()
+    return None
+
+
+def _mode_name(selector: str | None) -> str | None:
+    text = (selector or "").lower()
+    for mode in ("ecb", "cbc", "ctr", "gcm", "ccm", "ofb", "cfb", "cfb1", "cfb8"):
+        if f"_{mode}" in text or f"-{mode}" in text:
+            return mode
+    return None

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import joblib
@@ -20,6 +21,8 @@ SEMANTIC_VETO_THRESHOLD = 0.95
 
 
 def default_model_path() -> Path:
+    if configured := os.environ.get("CIPHERFAULT_RECOGNIZER_MODEL"):
+        return Path(configured)
     candidates = (
         Path(__file__).resolve().parents[3] / "models" / "recognizer.pt",
         Path.cwd() / "models" / "recognizer.pt",
@@ -60,18 +63,48 @@ def recognize_binary(binary: str | Path) -> tuple[list[PrimitiveEvidence], list[
     probabilities = (torch.cat(logits) / checkpoint["temperature"]).softmax(dim=1)
     semantic = semantic_head.predict_proba(np.stack([graph_summary(graph) for graph in graphs]))
     thresholds = checkpoint["thresholds"]
+    semantic_thresholds = checkpoint.get("semantic_thresholds", {})
+    deployable = _deployable_label_ids(checkpoint, none_id)
     asserted, candidates = [], []
     for graph, scores, corroboration in zip(graphs, probabilities, semantic):
-        score, primitive_id = scores[:none_id].max(dim=0)
-        primitive_id = int(primitive_id)
+        primitive_id, score, method = _recognized_label(
+            scores, corroboration, thresholds, semantic_thresholds, deployable, none_id
+        )
+        if primitive_id is None:
+            continue
         evidence = PrimitiveEvidence(
             primitive=labels[primitive_id],
             address=graph.address,
-            method="gnn-semantic-ensemble",
-            confidence=float(min(score, corroboration[primitive_id])),
+            method=method,
+            confidence=float(score),
         )
-        if float(score) >= thresholds[primitive_id] and corroboration[primitive_id] >= SEMANTIC_VETO_THRESHOLD:
+        if method != "candidate":
             asserted.append(evidence)
-        elif float(score) >= 0.5:
+        else:
             candidates.append(evidence)
     return asserted, candidates
+
+
+def _deployable_label_ids(checkpoint: dict, none_id: int) -> set[int]:
+    return set(checkpoint.get("deployable_label_ids", range(none_id)))
+
+
+def _recognized_label(scores, corroboration, thresholds, semantic_thresholds, deployable, none_id):
+    best = None
+    for primitive_id in sorted(deployable):
+        if primitive_id >= none_id:
+            continue
+        gnn_score = float(scores[primitive_id])
+        semantic_score = float(corroboration[primitive_id])
+        if gnn_score >= thresholds[primitive_id] and semantic_score >= SEMANTIC_VETO_THRESHOLD:
+            confidence = min(gnn_score, semantic_score)
+            if best is None or confidence > best[1]:
+                best = (primitive_id, confidence, "gnn-semantic-ensemble")
+        elif semantic_score >= semantic_thresholds.get(primitive_id, 1.1):
+            if best is None or semantic_score > best[1]:
+                best = (primitive_id, semantic_score, "semantic-head")
+        elif gnn_score >= 0.5 or semantic_score >= 0.5:
+            confidence = max(gnn_score, semantic_score)
+            if best is None or confidence > best[1]:
+                best = (primitive_id, confidence, "candidate")
+    return best or (None, 0.0, "candidate")

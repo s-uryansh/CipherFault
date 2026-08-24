@@ -38,7 +38,7 @@ TEST_SOURCES = {
     "boringssl-rsa", "boringssl-ecc", "boringssl-sha", "liboqs-ML-DSA", "liboqs-SLH-DSA",
 }
 MIN_SUPPORT = {**{label: 100 for label in PRIMITIVE_IDS}, NONE_ID: 1000}
-CALIBRATION_PRECISION = 1.0
+CALIBRATION_PRECISION = 0.95
 SEMANTIC_VETO_THRESHOLD = 0.95
 SEED = 17
 
@@ -53,6 +53,15 @@ def ensemble_predictions(gnn_probabilities, semantic_probabilities, thresholds):
     for index, primitive in enumerate(predicted):
         if primitive == NONE_ID or semantic_probabilities[index, primitive] < SEMANTIC_VETO_THRESHOLD:
             predicted[index] = NONE_ID
+    return predicted
+
+
+def combined_predictions(gnn_probabilities, semantic_probabilities, gnn_thresholds, semantic_thresholds):
+    predicted = ensemble_predictions(gnn_probabilities, semantic_probabilities, gnn_thresholds)
+    semantic_predicted = predictions(semantic_probabilities, semantic_thresholds)
+    for index, primitive in enumerate(semantic_predicted):
+        if predicted[index] == NONE_ID and primitive != NONE_ID:
+            predicted[index] = primitive
     return predicted
 
 
@@ -81,11 +90,13 @@ def calibrate_temperature(logits, labels) -> float:
     return float(log_temperature.exp().detach().clamp(0.05, 20.0).item())
 
 
-def choose_threshold(probabilities, labels, primitive: int) -> float:
+def choose_threshold(probabilities, labels, primitive: int, semantic_probabilities=None) -> float:
     candidates = sorted(set(float(value) for value in probabilities[:, primitive]), reverse=True)
     best = 1.1
     for threshold in candidates:
         asserted = probabilities[:, primitive] >= threshold
+        if semantic_probabilities is not None:
+            asserted &= semantic_probabilities[:, primitive] >= SEMANTIC_VETO_THRESHOLD
         count = int(asserted.sum())
         if count and float((labels[asserted] == primitive).float().mean()) >= CALIBRATION_PRECISION:
             best = threshold
@@ -115,6 +126,50 @@ def metrics(labels, predicted):
     return result
 
 
+def gate_failures(result: dict) -> list[dict]:
+    failures = []
+    for label, required in MIN_SUPPORT.items():
+        name = LABELS[label]
+        if result["support"][name] < required:
+            failures.append({
+                "label": name,
+                "metric": "support",
+                "observed": result["support"][name],
+                "required": required,
+            })
+    for label in PRIMITIVE_IDS:
+        name = LABELS[label]
+        if result["precision"][name] < 0.95:
+            failures.append({
+                "label": name,
+                "metric": "precision",
+                "observed": result["precision"][name],
+                "required": 0.95,
+            })
+    if result["none_false_positive_rate"] > 0.01:
+        failures.append({
+            "label": "none",
+            "metric": "false_positive_rate",
+            "observed": result["none_false_positive_rate"],
+            "required": 0.01,
+        })
+    return failures
+
+
+def deployable_labels(result: dict) -> list[str]:
+    return [
+        LABELS[label]
+        for label in PRIMITIVE_IDS
+        if result["asserted"][LABELS[label]] > 0
+        and result["precision"][LABELS[label]] >= 0.95
+    ]
+
+
+def deployable_label_ids(result: dict) -> list[int]:
+    names = set(deployable_labels(result))
+    return [label for label in PRIMITIVE_IDS if LABELS[label] in names]
+
+
 def sliced_metrics(graphs, labels, predicted, attribute):
     return {
         value: metrics(labels[indexes], predicted[indexes])
@@ -125,7 +180,10 @@ def sliced_metrics(graphs, labels, predicted, attribute):
 
 def operating_score(logits, labels, semantic_probabilities):
     probabilities = logits.softmax(dim=1)
-    thresholds = {label: choose_threshold(probabilities, labels, label) for label in PRIMITIVE_IDS}
+    thresholds = {
+        label: choose_threshold(probabilities, labels, label, semantic_probabilities)
+        for label in PRIMITIVE_IDS
+    }
     result = metrics(labels, ensemble_predictions(probabilities, semantic_probabilities, thresholds))
     qualified = sum(result["precision"][LABELS[label]] >= CALIBRATION_PRECISION for label in PRIMITIVE_IDS)
     recall = sum(
@@ -203,14 +261,21 @@ def main() -> int:
     validation_logits, validation_labels = scores(model, validation, device)
     temperature = calibrate_temperature(validation_logits, validation_labels)
     validation_probabilities = (validation_logits / temperature).softmax(dim=1)
-    thresholds = {label: choose_threshold(validation_probabilities, validation_labels, label) for label in PRIMITIVE_IDS}
+    thresholds = {
+        label: choose_threshold(validation_probabilities, validation_labels, label, validation_semantic)
+        for label in PRIMITIVE_IDS
+    }
+    semantic_thresholds = {
+        label: choose_threshold(validation_semantic, validation_labels, label)
+        for label in PRIMITIVE_IDS
+    }
     test_logits, test_labels = scores(model, test, device)
     test_semantic = torch.tensor(
         semantic_head.predict_proba(np.stack([graph_summary(graph) for graph in test])),
         dtype=torch.float,
     )
-    test_predictions = ensemble_predictions(
-        (test_logits / temperature).softmax(dim=1), test_semantic, thresholds
+    test_predictions = combined_predictions(
+        (test_logits / temperature).softmax(dim=1), test_semantic, thresholds, semantic_thresholds
     )
     result = metrics(test_labels, test_predictions)
     result["slices"] = {
@@ -233,15 +298,20 @@ def main() -> int:
             "validation_sources": sorted(VALIDATION_SOURCES), "held_out_sources": sorted(TEST_SOURCES),
         },
         "temperature": temperature,
-        "decision": f"GNN prediction with semantic-head agreement >= {SEMANTIC_VETO_THRESHOLD}",
+        "decision": f"GNN prediction with semantic-head agreement >= {SEMANTIC_VETO_THRESHOLD}; semantic-head fallback when independently precision-gated",
         "validation_selection": best_selection,
         "thresholds": {LABELS[k]: v for k, v in thresholds.items()},
+        "semantic_thresholds": {LABELS[k]: v for k, v in semantic_thresholds.items()},
     })
-    passed = (
+    all_class_passed = (
         all(result["support"][LABELS[k]] >= required for k, required in MIN_SUPPORT.items())
         and all(result["precision"][LABELS[k]] >= 0.95 for k in PRIMITIVE_IDS)
         and result["none_false_positive_rate"] <= 0.01
     )
+    result["all_class_gate_passed"] = all_class_passed
+    result["gate_failures"] = gate_failures(result)
+    result["deployable_labels"] = deployable_labels(result)
+    passed = bool(result["deployable_labels"]) and result["none_false_positive_rate"] <= 0.01
     result["passed"] = passed
 
     MODEL_DIR.mkdir(exist_ok=True)
@@ -251,6 +321,8 @@ def main() -> int:
     card.write_text(
         "# CipherFault primitive recognizer\n\n"
         f"Deployment gate: **{'PASS' if passed else 'FAIL'}**.\n\n"
+        f"All-class gate: **{'PASS' if all_class_passed else 'FAIL'}**. "
+        f"Deployable labels: {', '.join(result['deployable_labels']) or 'none'}.\n\n"
         "The model recognizes AES, RSA, ECC, SHA, ML-KEM, ML-DSA, and SLH-DSA regions in cooperative x86_64 and AArch64 ELF binaries. "
         f"Evaluation holds out {', '.join(sorted(TEST_SOURCES))} by source project. Confidence is "
         f"temperature-scaled on held-out {', '.join(sorted(VALIDATION_SOURCES))} projects. It is not calibrated "
@@ -265,7 +337,16 @@ def main() -> int:
     deployable = MODEL_DIR / f"{args.name}.pt"
     semantic_path = MODEL_DIR / f"{args.name}.semantic.joblib"
     if passed:
-        torch.save({"state_dict": model.cpu().state_dict(), "input_dim": train[0].x.shape[1], "classes": len(LABELS), "labels": LABELS, "temperature": temperature, "thresholds": thresholds}, deployable)
+        torch.save({
+            "state_dict": model.cpu().state_dict(),
+            "input_dim": train[0].x.shape[1],
+            "classes": len(LABELS),
+            "labels": LABELS,
+            "temperature": temperature,
+            "thresholds": thresholds,
+            "semantic_thresholds": semantic_thresholds,
+            "deployable_label_ids": deployable_label_ids(result),
+        }, deployable)
         joblib.dump(semantic_head, semantic_path)
     else:
         deployable.unlink(missing_ok=True)

@@ -38,12 +38,12 @@ LOW_LEVEL_AES = {
     "aes_cbc_encrypt_blocks": {
         "primitive": "AES",
         "variant": "AES-CBC",
-        "operands": {"key": 1, "iv": 2},
+        "operands": {"key": 1},
     },
     "aes_cbc_decrypt_blocks": {
         "primitive": "AES",
         "variant": "AES-CBC",
-        "operands": {"key": 1, "iv": 2},
+        "operands": {"key": 1},
     },
 }
 

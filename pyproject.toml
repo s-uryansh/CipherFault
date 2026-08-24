@@ -27,7 +27,10 @@ dev = [
     "jsonschema>=4.23",
     "pytest>=9",
     "pyelftools>=0.33",
+    "scikit-learn",
     "tabulate",
+    "torch",
+    "torch-geometric",
 ]
 
 [project.scripts]

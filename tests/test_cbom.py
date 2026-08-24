@@ -115,3 +115,43 @@ def test_ecc_constructor_asset_does_not_guess_usage_primitive():
     algorithm = report_to_cbom(report)["components"][0]["cryptoProperties"]["algorithmProperties"]
 
     assert algorithm["primitive"] == "other"
+
+
+def test_aes_variant_sets_cbom_mode():
+    report = AnalysisReport(
+        target="cbc",
+        target_sha256="1" * 64,
+        primitives=[PrimitiveEvidence("AES", "00100000", "resolved_api_anchor", 1.0, "AES-CBC")],
+    )
+
+    algorithm = report_to_cbom(report)["components"][0]["cryptoProperties"]["algorithmProperties"]
+
+    assert algorithm["mode"] == "cbc"
+    assert "parameterSetIdentifier" not in algorithm
+
+
+def test_low_level_ecb_symbol_sets_ecb_mode_not_encrypt():
+    finding = Finding(
+        id="ecb",
+        tier="VERIFIED_FACT",
+        primitive="AES",
+        fact_type="ecb_mode",
+        cwe="CWE-327",
+        summary="AES cipher selector resolves to ECB mode: AES_ecb_encrypt",
+        function="main",
+        callee="AES_ecb_encrypt",
+        call_addr="00100000",
+        operand="cipher",
+        origin="AES_ecb_encrypt",
+        provenance=[],
+    )
+    report = AnalysisReport(
+        target="ecb",
+        target_sha256="2" * 64,
+        primitives=[PrimitiveEvidence("AES", "00100000", "resolved_api_anchor", 1.0)],
+        verified_facts=[finding],
+    )
+
+    algorithm = report_to_cbom(report)["components"][0]["cryptoProperties"]["algorithmProperties"]
+
+    assert algorithm["mode"] == "ecb"

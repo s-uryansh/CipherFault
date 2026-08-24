@@ -42,10 +42,11 @@ class ReadOnlyMemory:
     def __init__(self, binary: str | Path):
         with Path(binary).open("rb") as stream:
             elf = ELFFile(stream)
-            self.minimum_load_address = min(
+            load_addresses = [
                 segment["p_vaddr"] for segment in elf.iter_segments()
                 if segment["p_type"] == "PT_LOAD"
-            )
+            ]
+            self.minimum_load_address = min(load_addresses) if load_addresses else 0
             self.sections = [
                 (section["sh_addr"], section.data())
                 for section in elf.iter_sections()

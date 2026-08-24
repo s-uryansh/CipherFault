@@ -150,6 +150,33 @@ def static_iv_finding(
         section=section,
     )
 
+
+def implicit_zero_iv_finding(anchor, primitive: str = "AES") -> Finding:
+    function = str(getattr(anchor, "func_name", ""))
+    callee = str(getattr(anchor, "callee", ""))
+    call_addr = str(getattr(anchor, "call_addr", ""))
+    return Finding(
+        id=_finding_id(primitive, "static_iv", function, callee, call_addr, "implicit_zero_iv"),
+        tier="VERIFIED_FACT",
+        primitive=primitive,
+        fact_type="static_iv",
+        cwe="CWE-329",
+        summary=f"{primitive} CBC helper uses an implicit all-zero IV",
+        function=function,
+        callee=callee,
+        call_addr=call_addr,
+        operand="iv",
+        origin="implicit all-zero IV",
+        provenance=[
+            {
+                "kind": "IMPLICIT_CONST",
+                "detail": "CBC chain data initialized to all-zero block inside callee",
+                "varnode": callee,
+            }
+        ],
+    )
+
+
 def weak_randomness_finding(
     anchor, path, primitive: str = "AES", operand: str = "key"
 ) -> Finding | None:

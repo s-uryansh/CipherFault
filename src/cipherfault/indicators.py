@@ -10,7 +10,7 @@ from .report import Indicator
 def repeated_operand_indicators(anchors) -> list[Indicator]:
     groups = defaultdict(list)
     for anchor in anchors:
-        operand = "iv" if anchor.primitive is None else "key" if anchor.primitive == "ML-KEM" else None
+        operand = _repeated_operand(anchor)
         value = anchor.operands.get(operand) if operand else None
         if value is None or (value.isConstant() and value.getOffset() == 0):
             continue
@@ -32,6 +32,14 @@ def repeated_operand_indicators(anchors) -> list[Indicator]:
         for (primitive, function, operand, _), addresses in groups.items()
         if len(addresses) > 1
     ]
+
+
+def _repeated_operand(anchor) -> str | None:
+    if anchor.primitive == "ML-KEM" and "key" in anchor.operands:
+        return "key"
+    if anchor.primitive in {None, "AES"} and "iv" in anchor.operands:
+        return "iv"
+    return None
 
 
 def rng_quality_indicator(anchor, path, operand: str) -> Indicator:

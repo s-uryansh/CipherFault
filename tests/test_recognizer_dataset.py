@@ -12,7 +12,17 @@ sys.path.insert(0, "scripts")
 from build_recognizer_dataset import LABELS as DATASET_LABELS, function_label
 from merge_matrix_metadata import artifact_matches_arch, merge
 from build_matrix import jobs, optimization_levels
-from train_recognizer import LABELS, TEST_SOURCES, VALIDATION_SOURCES, ensemble_predictions, source_balanced_weights
+from train_recognizer import (
+    LABELS,
+    TEST_SOURCES,
+    VALIDATION_SOURCES,
+    choose_threshold,
+    combined_predictions,
+    deployable_labels,
+    ensemble_predictions,
+    gate_failures,
+    source_balanced_weights,
+)
 from cipherfault.lifting.types import BasicBlock, LiftedFunction
 from cipherfault.recognizer.dwarf import (
     SourceRange,
@@ -97,6 +107,65 @@ def test_precision_veto_requires_gnn_and_semantic_head_agreement():
     ])
 
     assert ensemble_predictions(gnn, semantic, {label: 0.9 for label in range(7)}).tolist() == [0, 1, 7]
+
+
+def test_combined_predictions_use_independently_gated_semantic_head():
+    gnn = torch.tensor([
+        [0.40, 0.01, 0.01, 0.0, 0.01, 0.0, 0.0, 0.57],
+        [0.96, 0.01, 0.01, 0.0, 0.01, 0.0, 0.0, 0.01],
+    ])
+    semantic = torch.tensor([
+        [0.97, 0.01, 0.01, 0.0, 0.0, 0.0, 0.0, 0.02],
+        [0.01, 0.97, 0.01, 0.0, 0.0, 0.0, 0.0, 0.01],
+    ])
+
+    assert combined_predictions(
+        gnn,
+        semantic,
+        {label: 0.9 for label in range(7)},
+        {0: 0.9, **{label: 1.1 for label in range(1, 7)}},
+    ).tolist() == [0, 7]
+
+
+def test_threshold_selection_calibrates_after_semantic_veto():
+    gnn = torch.tensor([
+        [0.99, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01],
+        [0.90, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.10],
+        [0.89, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.11],
+    ])
+    labels = torch.tensor([DATASET_LABELS["none"], DATASET_LABELS["AES"], DATASET_LABELS["none"]])
+    semantic = torch.tensor([
+        [0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.99],
+        [0.96, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.04],
+        [0.96, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.04],
+    ])
+
+    assert choose_threshold(gnn, labels, DATASET_LABELS["AES"], semantic) == pytest.approx(0.90)
+
+
+def test_gate_failures_name_blocking_metrics():
+    result = {
+        "support": {name: 1000 for name in LABELS.values()},
+        "precision": {name: 1.0 for name in LABELS.values()},
+        "none_false_positive_rate": 0.0,
+    }
+    result["precision"]["AES"] = 0.0
+
+    assert gate_failures(result) == [
+        {"label": "AES", "metric": "precision", "observed": 0.0, "required": 0.95}
+    ]
+
+
+def test_deployable_labels_require_assertions_and_precision():
+    result = {
+        "asserted": {name: 0 for name in LABELS.values()},
+        "precision": {name: 1.0 for name in LABELS.values()},
+    }
+    result["asserted"]["AES"] = 3
+    result["asserted"]["RSA"] = 3
+    result["precision"]["RSA"] = 0.5
+
+    assert deployable_labels(result) == ["AES"]
 
 
 def test_region_graph_keeps_cfg_and_dfg_edge_types_separate():

@@ -19,21 +19,21 @@ provide.
 
 ## Current completion
 
-Overall engineering completion against the full project specification is **58%**.
+Overall engineering completion against the full project specification is **74%**.
 This is not a release-readiness claim.
 
 | Area | Status | Completion |
 |---|---|---:|
 | Compiler/architecture corpus | 9,240 successful artifacts across GCC 11/12/13, Clang 15/16/17, x86_64, AArch64, and O0-Oz where supported | 95% |
-| Deterministic scanner and provenance | API anchors, conservative bounded caller/return flow, buffer-copy/fill flow, temporal last-writer checks | 78% |
-| Tier-1 verified facts | AES modes, key/IV origin, RNG origin, weak RNG, digest weakness, RSA/ECC/PQC parameters | 72% |
-| Tier-2 indicators | Separate RNG-quality, repeated-operand, and verification-outcome analyst questions | 65% |
-| Eight-class recognizer | Corpus built; 7,970 artifact caches preserved; final dataset assembly, training, calibration, and held-out gates pending | 45% |
-| Independent/CVE evaluation | Local/negative/demo manifests exist; genuine reproducible CVE gate is still under construction | 35% |
-| Packaging, CI, docs, and release | Wheel/CI/container foundations exist; model packaging, full platform matrix, release signing, and final audits remain | 55% |
+| Deterministic scanner and provenance | API anchors, conservative bounded caller/return flow, buffer-copy/fill flow, temporal last-writer checks, explicit closed recognizer fallback | 90% |
+| Tier-1 verified facts | AES modes, key/IV origin, implicit zero IV, RNG origin, weak RNG, digest weakness, RSA/ECC/PQC parameters | 80% |
+| Tier-2 indicators | Separate RNG-quality, repeated-operand, and verification-outcome analyst questions | 70% |
+| Eight-class recognizer | Precision-gated artifacts are built for AES and ML-KEM; all-class source-heldout gate still fails for RSA/ECC/SHA/ML-DSA/SLH-DSA | 62% |
+| Independent/CVE evaluation | Local/negative/demo manifests plus U-Boot CVE-2017-3225 zero-IV gate | 60% |
+| Packaging, CI, docs, and release | Wheel/CI/container foundations exist; local model artifacts are generated; release artifact distribution, full platform matrix, release signing, and final audits remain | 60% |
 
-The remaining critical path is the eight-class recognizer gate, real-binary/CVE recall
-evaluation, broader static-anchor validation, platform expansion beyond Linux ELF,
+The remaining critical path is the eight-class recognizer deployment gate, broader
+real-binary/CVE recall evaluation, broader static-anchor validation, platform expansion beyond Linux ELF,
 release packaging, and final security/scientific/legal review.
 
 ## Evidence tiers
@@ -47,7 +47,8 @@ A code-intrinsic fact derived from the binary with a provenance path. Current ex
 - AES ECB selected through EVP or a recognized low-level AES API (`CWE-327`).
 - AES key resolved to `.rodata`, a returned constant, a resolved buffer copy, or a
   constant buffer fill (`CWE-321`).
-- AES-CBC IV resolved to static storage or a constant buffer fill (`CWE-329`).
+- AES-CBC IV resolved to static storage, a constant buffer fill, or an implicit
+  all-zero helper state (`CWE-329`).
 - Key, IV, or ML-KEM randomness traced to a named RNG source.
 - `rand()`/time-derived data reaching key or encapsulation randomness (`CWE-338`).
 - MD5 and SHA-1 selected through resolved digest APIs (`CWE-327`).
@@ -98,18 +99,13 @@ optimization gates pass. Existing model artifacts are earlier experimental basel
 
 Python 3.13, Java, and a local Ghidra installation are required.
 
-> **Environment setup:** install the pinned requirements inside the virtual environment
-> from `requirement.txt`. The file currently contains an editable SSH GitHub entry, so
-> GitHub SSH access must already be configured.
-
 ```bash
 git clone <cipherfault-repository-url>
 cd cipherfault
 python3.13 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -r requirement.txt
-python -m pip install -e . --no-deps
+python -m pip install -e ".[dev]"
 ```
 
 All commands below assume the virtual environment is active. If `pyghidra.start()`
@@ -177,26 +173,44 @@ architecture metadata.
 bash scripts/fetch_corpus.sh
 bash scripts/fetch_toolchains.sh
 python scripts/build_matrix.py
+python scripts/merge_matrix_metadata.py corpus/build/matrix/shards/*.jsonl --output corpus/build/matrix/metadata.jsonl
 python scripts/build_recognizer_dataset.py
 python scripts/train_recognizer.py
+python scripts/check_recognizer_artifacts.py --require-artifacts --require-all-class
+```
+
+TODO: recognizer completion run. Dataset generation is resource-heavy; training is CPU-only
+today. The current artifacts are precision-gated and deployable only for labels listed
+in `models/recognizer.metrics.json` under `deployable_labels` (`AES` and `ML-KEM` in the current
+run). The all-class source-heldout gate remains recorded separately as
+`all_class_gate_passed`.
+
+When at least one label is precision-gated, `scripts/train_recognizer.py` writes
+`models/recognizer.pt` and `models/recognizer.semantic.joblib`. Unsupported labels keep
+threshold `1.1`, so runtime will not assert them. To use an already-built model outside
+`models/`, set:
+
+```bash
+export CIPHERFAULT_RECOGNIZER_MODEL=/path/to/recognizer.pt
 ```
 
 ## Evaluation
 
-Current manifests contain nine local positive cases, six negative-control cases, and
-one independently sourced demo. They are engineering regressions, **not yet a genuine
-CVE benchmark**.
+Current manifests contain nine local positive cases, six negative-control cases,
+one independently sourced demo, and one genuine CVE gate for U-Boot CVE-2017-3225.
 
 ```bash
 python scripts/evaluate_manifest.py corpus/eval/manifest.local.json
 python scripts/evaluate_manifest.py corpus/eval/manifest.negative.json
 python scripts/evaluate_manifest.py corpus/eval/manifest.demo.json
+bash scripts/build_cve_fixtures.sh
+python scripts/evaluate_manifest.py corpus/eval/manifest.cve.json
 ```
 
-The first genuine candidate under construction is U-Boot CVE-2017-3225, whose AES-CBC
-environment encryption uses a zero IV. A benchmark result will not be claimed until the
-affected upstream source is reproducibly built, stripped, scanned, and compared with
-documented ground truth.
+The CVE gate builds U-Boot commit `d85ca029f257b53a96da6c2fb421e78a003a9943`
+from ignored upstream source into a debug-stripped relocatable object and checks that
+the AES-CBC helper emits `CWE-329` with origin `implicit all-zero IV`. Fully
+symbol-stripped relocatable U-Boot objects are still a fingerprinting limitation.
 
 ## Testing
 
@@ -206,9 +220,16 @@ python -m pytest -q tests
 bash scripts/verify.sh
 ```
 
-The scanner integration suite currently contains 29 passing cases after the latest provenance
-changes. The full release check must be rerun after the eight-class model and CVE
-evaluation are finalized.
+The full release-style check currently passes with 119 tests, local/negative/CVE/demo
+manifest evaluation, wheel install, and SBOM generation. The all-class recognizer gate
+still requires a separate heavy training/evaluation run.
+
+The Docker image installs the core scanner by default. To include learned-recognizer
+dependencies in an image, build with:
+
+```bash
+docker build --build-arg CIPHERFAULT_INSTALL_TARGET='.[recognizer]' -t cipherfault:recognizer .
+```
 
 ## Repository layout
 

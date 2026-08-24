@@ -1,0 +1,17 @@
+[
+{
+    "id": "CVE-2017-3225-UBOOT-ZERO-IV",
+    "source_url": "https://github.com/u-boot/u-boot",
+    "source_commit": "d85ca029f257b53a96da6c2fb421e78a003a9943",
+    "binary": "corpus/eval/CVE-2017-3225/target_uboot_cve_2017_3225.o",
+    "fingerprint_reference": "corpus/eval/CVE-2017-3225/target_uboot_cve_2017_3225_reference.o",
+    "expected_facts": [
+    {
+        "fact_type": "static_iv",
+        "cwe": "CWE-329",
+        "origin": "implicit all-zero IV"
+    }
+    ],
+    "notes": "U-Boot AES-CBC helper initializes CBC chain data to an all-zero block; target is debug-stripped, not symbol-stripped, because fully stripped relocatable objects currently lose recoverable function structure."
+}
+]

@@ -7,6 +7,7 @@ from .rules import (
     Finding,
     ecb_mode_finding,
     hardcoded_key_finding,
+    implicit_zero_iv_finding,
     known_weak_algorithm_finding,
     numeric_parameter_finding,
     operand_origin_finding,
@@ -213,6 +214,8 @@ def scan_binary(binary_path: str | Path, fingerprint_reference: str | Path | Non
             finding = ecb_mode_finding(anchor, cipher_name, primitive=primitive)
             if finding is not None:
                 findings.append(finding)
+            if anchor.callee in {"aes_cbc_encrypt_blocks", "aes_cbc_decrypt_blocks"}:
+                findings.append(implicit_zero_iv_finding(anchor, primitive=primitive))
 
             iv = anchor.operands.get("iv")
             if iv is not None:
@@ -308,11 +311,18 @@ def scan_binary(binary_path: str | Path, fingerprint_reference: str | Path | Non
 
     recognition_candidates = []
     try:
-        from .recognizer.runtime import recognize_binary
+        from .recognizer.runtime import default_model_path, recognize_binary
 
-        recognized, recognition_candidates = recognize_binary(binary_path)
-        for evidence in recognized:
-            primitives[(evidence.primitive, evidence.address)] = evidence
+        available, model_path, semantic_path = _recognizer_artifacts_available(default_model_path())
+        if available:
+            recognized, recognition_candidates = recognize_binary(binary_path)
+            for evidence in recognized:
+                primitives[(evidence.primitive, evidence.address)] = evidence
+        else:
+            diagnostics.append(Diagnostic(
+                code="RECOGNIZER_MODEL_UNAVAILABLE",
+                message=f"learned recognition skipped; missing {model_path} or {semantic_path}",
+            ))
     except (ImportError, ModuleNotFoundError):
         diagnostics.append(Diagnostic(
             code="RECOGNIZER_DEPENDENCIES_UNAVAILABLE",
@@ -339,6 +349,11 @@ def scan_binary(binary_path: str | Path, fingerprint_reference: str | Path | Non
 
 def findings_as_dicts(findings: list[Finding]) -> list[dict]:
     return [finding.to_dict() for finding in findings]
+
+
+def _recognizer_artifacts_available(model_path: Path) -> tuple[bool, Path, Path]:
+    semantic_path = model_path.with_suffix(".semantic.joblib")
+    return model_path.exists() and semantic_path.exists(), model_path, semantic_path
 
 
 def primitive_from_cipher_selector(cipher_name: str | None) -> str | None:
