@@ -25,7 +25,7 @@ dist/
 *.pt
 *.log
 *.tmp
-
+run.log
 # CipherFault generated/downloaded data
 corpus/build/
 corpus/external/
