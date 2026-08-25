@@ -1,0 +1,24 @@
+[
+  {
+    "id": "MOONLIGHT-PLATFORM-CRYPTO-DYNAMIC-OPERANDS",
+    "source_url": "https://github.com/moonlight-stream/moonlight-common-c",
+    "source_commit": "874ac9548f1bd6f095ef2b435c42cdde460e7821",
+    "binary": "corpus/eval/MOONLIGHT-CRYPTO/target_platform_crypto_strip.o",
+    "expected_facts": [],
+    "forbidden_facts": [
+      {
+        "fact_type": "hardcoded_key",
+        "cwe": "CWE-321"
+      },
+      {
+        "fact_type": "static_iv",
+        "cwe": "CWE-329"
+      },
+      {
+        "fact_type": "weak_randomness",
+        "cwe": "CWE-338"
+      }
+    ],
+    "notes": "Focused object build of upstream PlatformCrypto.c; key/IV operands are caller supplied and must not be promoted to Tier-1 hardcoded or weak-randomness facts."
+  }
+]

@@ -78,9 +78,16 @@ def evaluate_manifest(path: str | Path) -> dict:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("manifest")
+    parser.add_argument("--min-recall", type=float, default=None)
     args = parser.parse_args(argv)
     summary = evaluate_manifest(args.manifest)
     print(json.dumps(summary, indent=2, sort_keys=True))
+    if args.min_recall is not None and summary["recall"] < args.min_recall:
+        print(
+            f"recall {summary['recall']:.3f} is below required {args.min_recall:.3f}",
+            file=sys.stderr,
+        )
+        return 1
     return 0 if summary["success"] else 1
 
 if __name__ == "__main__":

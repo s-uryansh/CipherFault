@@ -24,6 +24,8 @@ def main(argv: list[str] | None = None) -> int:
     metrics = json.loads(metrics_path.read_text())
     if args.require_all_class and not metrics.get("all_class_gate_passed"):
         raise SystemExit("all-class recognizer gate failed: " + _failure_summary(metrics))
+    if metrics.get("all_class_gate_passed") and metrics.get("gate_failures"):
+        raise SystemExit("recognizer metrics are inconsistent: all-class gate passed with failures")
     deployable = metrics.get("deployable_labels", [])
     if metrics.get("passed") != bool(deployable):
         raise SystemExit("recognizer metrics `passed` does not match deployable labels")

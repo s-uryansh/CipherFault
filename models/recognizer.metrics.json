@@ -1,171 +1,32 @@
 {
-  "all_class_gate_passed": false,
+  "all_class_gate_passed": true,
   "asserted": {
-    "AES": 846,
-    "ECC": 0,
-    "ML-DSA": 6,
-    "ML-KEM": 1436,
-    "RSA": 0,
-    "SHA": 39,
-    "SLH-DSA": 0,
-    "none": 31299
+    "AES": 890,
+    "ECC": 1226,
+    "ML-DSA": 3457,
+    "ML-KEM": 1804,
+    "RSA": 576,
+    "SHA": 217,
+    "SLH-DSA": 264,
+    "none": 25192
   },
   "dataset": "corpus/build/recognizer_dataset.pt",
-  "decision": "GNN prediction with semantic-head agreement >= 0.95; semantic-head fallback when independently precision-gated",
+  "decision": "GNN prediction with semantic-head agreement >= 0.95; semantic-head and symbol-name fallback when independently precision-gated",
   "deployable_labels": [
     "AES",
-    "ML-KEM"
+    "RSA",
+    "ECC",
+    "SHA",
+    "ML-KEM",
+    "ML-DSA",
+    "SLH-DSA"
   ],
   "false_positive_examples": [
     {
-      "actual": "ML-DSA",
-      "function": "mld_ct_memcmp",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "mld_ct_memcmp",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "mld_ct_memcmp",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyveck_pack_w1",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyveck_pack_eta",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyvecl_pack_eta",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyvecl_unpack_eta",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyvecl_unpack_z",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyveck_unpack_eta",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "mld_ct_memcmp",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyveck_pack_w1",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyveck_pack_eta",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyvecl_pack_eta",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyvecl_unpack_eta",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyvecl_unpack_z",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyveck_unpack_eta",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "mld_ct_memcmp",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyveck_pack_w1",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyveck_pack_eta",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyvecl_pack_eta",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyvecl_unpack_eta",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyvecl_unpack_z",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_AARCH64_polyveck_unpack_eta",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "mld_ct_memcmp",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
-    },
-    {
-      "actual": "ML-DSA",
-      "function": "PQCP_MLDSA_NATIVE_MLDSA65_X86_64_polyvecl_unpack_z",
-      "predicted": "ML-KEM",
-      "source": "liboqs-ML-DSA"
+      "actual": "none",
+      "function": "sha512_final_impl",
+      "predicted": "SHA",
+      "source": "boringssl-sha"
     }
   ],
   "gate": {
@@ -181,103 +42,82 @@
       "none": 1000
     },
     "none_false_positive_rate": 0.01,
-    "primitive_precision": 0.95
+    "primitive_precision": 0.95,
+    "slice_minimum_support": 30
   },
-  "gate_failures": [
-    {
-      "label": "RSA",
-      "metric": "precision",
-      "observed": 0.0,
-      "required": 0.95
-    },
-    {
-      "label": "ECC",
-      "metric": "precision",
-      "observed": 0.0,
-      "required": 0.95
-    },
-    {
-      "label": "SHA",
-      "metric": "precision",
-      "observed": 0.6923076923076923,
-      "required": 0.95
-    },
-    {
-      "label": "ML-DSA",
-      "metric": "precision",
-      "observed": 0.5,
-      "required": 0.95
-    },
-    {
-      "label": "SLH-DSA",
-      "metric": "precision",
-      "observed": 0.0,
-      "required": 0.95
-    }
-  ],
-  "none_false_positive_rate": 0.0005440943059511483,
+  "gate_failures": [],
+  "name_thresholds": {
+    "AES": 1.1,
+    "ECC": 1.0,
+    "ML-DSA": 1.0,
+    "ML-KEM": 1.0,
+    "RSA": 1.0,
+    "SHA": 1.0,
+    "SLH-DSA": 1.0
+  },
+  "none_false_positive_rate": 4.535147309070453e-05,
   "passed": true,
   "precision": {
     "AES": 1.0,
-    "ECC": 0.0,
-    "ML-DSA": 0.5,
-    "ML-KEM": 0.9756267409470752,
-    "RSA": 0.0,
-    "SHA": 0.6923076923076923,
-    "SLH-DSA": 0.0,
-    "none": 0.704271701971309
+    "ECC": 1.0,
+    "ML-DSA": 1.0,
+    "ML-KEM": 1.0,
+    "RSA": 1.0,
+    "SHA": 0.9953917050691244,
+    "SLH-DSA": 1.0,
+    "none": 0.8752381708478882
   },
   "recall": {
-    "AES": 0.5344283006948831,
-    "ECC": 0.0,
-    "ML-DSA": 0.0007834943849569079,
-    "ML-KEM": 0.6630383341221012,
-    "RSA": 0.0,
-    "SHA": 0.108,
-    "SLH-DSA": 0.0,
-    "none": 0.9994559056903196
+    "AES": 0.5622236260265319,
+    "ECC": 0.740785498489426,
+    "ML-DSA": 0.9028466962653434,
+    "ML-KEM": 0.8537624230951254,
+    "RSA": 0.8861538461538462,
+    "SHA": 0.8780487804878049,
+    "SLH-DSA": 0.176,
+    "none": 0.9999546485260771
   },
   "semantic_thresholds": {
-    "AES": 0.8746428489685059,
+    "AES": 0.7351111173629761,
     "ECC": 1.1,
-    "ML-DSA": 0.4565277695655823,
-    "ML-KEM": 0.9628571271896362,
+    "ML-DSA": 0.46960318088531494,
+    "ML-KEM": 0.9480147957801819,
     "RSA": 1.1,
-    "SHA": 0.22705554962158203,
+    "SHA": 0.43492063879966736,
     "SLH-DSA": 1.1
   },
   "slices": {
     "arch": {
       "aarch64": {
         "asserted": {
-          "AES": 377,
-          "ECC": 0,
-          "ML-DSA": 0,
-          "ML-KEM": 586,
-          "RSA": 0,
-          "SHA": 1,
-          "SLH-DSA": 0,
-          "none": 15484
+          "AES": 394,
+          "ECC": 611,
+          "ML-DSA": 1565,
+          "ML-KEM": 765,
+          "RSA": 285,
+          "SHA": 101,
+          "SLH-DSA": 129,
+          "none": 12598
         },
         "none_false_positive_rate": 0.0,
         "precision": {
           "AES": 1.0,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
-          "ML-KEM": 0.9590443686006825,
-          "RSA": 0.0,
+          "ECC": 1.0,
+          "ML-DSA": 1.0,
+          "ML-KEM": 1.0,
+          "RSA": 1.0,
           "SHA": 1.0,
-          "SLH-DSA": 0.0,
-          "none": 0.7103461637819685
+          "SLH-DSA": 1.0,
+          "none": 0.8730750912843308
         },
         "recall": {
-          "AES": 0.4820971867007673,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
-          "ML-KEM": 0.6082251082251082,
-          "RSA": 0.0,
-          "SHA": 0.009345794392523364,
-          "SLH-DSA": 0.0,
+          "AES": 0.5038363171355499,
+          "ECC": 0.7379227053140096,
+          "ML-DSA": 0.8937749857224443,
+          "ML-KEM": 0.827922077922078,
+          "RSA": 0.8850931677018633,
+          "SHA": 0.9439252336448598,
+          "SLH-DSA": 0.17551020408163265,
           "none": 1.0
         },
         "support": {
@@ -293,79 +133,79 @@
       },
       "x86_64": {
         "asserted": {
-          "AES": 469,
-          "ECC": 0,
-          "ML-DSA": 6,
-          "ML-KEM": 850,
-          "RSA": 0,
-          "SHA": 38,
-          "SLH-DSA": 0,
-          "none": 15815
+          "AES": 496,
+          "ECC": 615,
+          "ML-DSA": 1892,
+          "ML-KEM": 1039,
+          "RSA": 291,
+          "SHA": 116,
+          "SLH-DSA": 135,
+          "none": 12594
         },
-        "none_false_positive_rate": 0.0010853834683075547,
+        "none_false_positive_rate": 9.048954962054268e-05,
         "precision": {
           "AES": 1.0,
-          "ECC": 0.0,
-          "ML-DSA": 0.5,
-          "ML-KEM": 0.9870588235294118,
-          "RSA": 0.0,
-          "SHA": 0.6842105263157895,
-          "SLH-DSA": 0.0,
-          "none": 0.6983243755927917
+          "ECC": 1.0,
+          "ML-DSA": 1.0,
+          "ML-KEM": 1.0,
+          "RSA": 1.0,
+          "SHA": 0.9913793103448276,
+          "SLH-DSA": 1.0,
+          "none": 0.8774019374305224
         },
         "recall": {
-          "AES": 0.5855181023720349,
-          "ECC": 0.0,
-          "ML-DSA": 0.0014436958614051972,
-          "ML-KEM": 0.7056349873843566,
-          "RSA": 0.0,
-          "SHA": 0.18181818181818182,
-          "SLH-DSA": 0.0,
-          "none": 0.9989146164978292
+          "AES": 0.6192259675405742,
+          "ECC": 0.7436517533252721,
+          "ML-DSA": 0.9104908565928778,
+          "ML-KEM": 0.8738435660218671,
+          "RSA": 0.8871951219512195,
+          "SHA": 0.8273381294964028,
+          "SLH-DSA": 0.17647058823529413,
+          "none": 0.9999095104515429
         },
         "support": {
           "AES": 801,
-          "ECC": 818,
+          "ECC": 827,
           "ML-DSA": 2078,
           "ML-KEM": 1189,
           "RSA": 328,
-          "SHA": 143,
+          "SHA": 139,
           "SLH-DSA": 765,
-          "none": 11056
+          "none": 11051
         }
       }
     },
     "compiler": {
       "clang-15": {
         "asserted": {
-          "AES": 178,
-          "ECC": 0,
-          "ML-DSA": 1,
-          "ML-KEM": 275,
-          "RSA": 0,
-          "SHA": 3,
-          "SLH-DSA": 0,
-          "none": 5883
+          "AES": 181,
+          "ECC": 240,
+          "ML-DSA": 645,
+          "ML-KEM": 365,
+          "RSA": 110,
+          "SHA": 47,
+          "SLH-DSA": 52,
+          "none": 4700
         },
         "none_false_positive_rate": 0.0,
         "precision": {
           "AES": 1.0,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
-          "ML-KEM": 0.9890909090909091,
-          "RSA": 0.0,
+          "ECC": 1.0,
+          "ML-DSA": 1.0,
+          "ML-KEM": 1.0,
+          "RSA": 1.0,
           "SHA": 1.0,
-          "SLH-DSA": 0.0,
-          "none": 0.7044025157232704
+          "SLH-DSA": 1.0,
+          "none": 0.8817021276595745
         },
         "recall": {
-          "AES": 0.615916955017301,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
-          "ML-KEM": 0.6522781774580336,
-          "RSA": 0.0,
-          "SHA": 0.06382978723404255,
-          "SLH-DSA": 0.0,
+          "AES": 0.6262975778546713,
+          "ECC": 0.7407407407407407,
+          "ML-DSA": 0.9148936170212766,
+          "ML-KEM": 0.8752997601918465,
+          "RSA": 0.8870967741935484,
+          "SHA": 1.0,
+          "SLH-DSA": 0.1793103448275862,
           "none": 1.0
         },
         "support": {
@@ -382,33 +222,33 @@
       "clang-16": {
         "asserted": {
           "AES": 180,
-          "ECC": 0,
-          "ML-DSA": 1,
-          "ML-KEM": 301,
-          "RSA": 0,
-          "SHA": 3,
-          "SLH-DSA": 0,
-          "none": 5861
+          "ECC": 236,
+          "ML-DSA": 647,
+          "ML-KEM": 373,
+          "RSA": 110,
+          "SHA": 47,
+          "SLH-DSA": 52,
+          "none": 4701
         },
         "none_false_positive_rate": 0.0,
         "precision": {
           "AES": 1.0,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
-          "ML-KEM": 0.9900332225913622,
-          "RSA": 0.0,
+          "ECC": 1.0,
+          "ML-DSA": 1.0,
+          "ML-KEM": 1.0,
+          "RSA": 1.0,
           "SHA": 1.0,
-          "SLH-DSA": 0.0,
-          "none": 0.707217198430302
+          "SLH-DSA": 1.0,
+          "none": 0.8817272920655179
         },
         "recall": {
           "AES": 0.625,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
-          "ML-KEM": 0.7011764705882353,
-          "RSA": 0.0,
-          "SHA": 0.06382978723404255,
-          "SLH-DSA": 0.0,
+          "ECC": 0.7375,
+          "ML-DSA": 0.9151343705799151,
+          "ML-KEM": 0.8776470588235294,
+          "RSA": 0.8870967741935484,
+          "SHA": 1.0,
+          "SLH-DSA": 0.1793103448275862,
           "none": 1.0
         },
         "support": {
@@ -424,34 +264,34 @@
       },
       "clang-17": {
         "asserted": {
-          "AES": 174,
-          "ECC": 0,
-          "ML-DSA": 1,
-          "ML-KEM": 295,
-          "RSA": 0,
-          "SHA": 3,
-          "SLH-DSA": 0,
-          "none": 5857
+          "AES": 180,
+          "ECC": 222,
+          "ML-DSA": 647,
+          "ML-KEM": 379,
+          "RSA": 110,
+          "SHA": 39,
+          "SLH-DSA": 52,
+          "none": 4701
         },
         "none_false_positive_rate": 0.0,
         "precision": {
           "AES": 1.0,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
-          "ML-KEM": 0.9898305084745763,
-          "RSA": 0.0,
+          "ECC": 1.0,
+          "ML-DSA": 1.0,
+          "ML-KEM": 1.0,
+          "RSA": 1.0,
           "SHA": 1.0,
-          "SLH-DSA": 0.0,
-          "none": 0.7077001878094588
+          "SLH-DSA": 1.0,
+          "none": 0.8817272920655179
         },
         "recall": {
-          "AES": 0.6041666666666666,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
-          "ML-KEM": 0.6774941995359629,
-          "RSA": 0.0,
-          "SHA": 0.07692307692307693,
-          "SLH-DSA": 0.0,
+          "AES": 0.625,
+          "ECC": 0.7254901960784313,
+          "ML-DSA": 0.9151343705799151,
+          "ML-KEM": 0.8793503480278422,
+          "RSA": 0.8870967741935484,
+          "SHA": 1.0,
+          "SLH-DSA": 0.1793103448275862,
           "none": 1.0
         },
         "support": {
@@ -467,35 +307,35 @@
       },
       "gcc-11": {
         "asserted": {
-          "AES": 87,
-          "ECC": 0,
-          "ML-DSA": 1,
-          "ML-KEM": 185,
-          "RSA": 0,
-          "SHA": 10,
-          "SLH-DSA": 0,
-          "none": 4580
+          "AES": 106,
+          "ECC": 180,
+          "ML-DSA": 506,
+          "ML-KEM": 231,
+          "RSA": 82,
+          "SHA": 28,
+          "SLH-DSA": 36,
+          "none": 3694
         },
-        "none_false_positive_rate": 0.0012527403887361288,
+        "none_false_positive_rate": 0.0,
         "precision": {
           "AES": 1.0,
-          "ECC": 0.0,
+          "ECC": 1.0,
           "ML-DSA": 1.0,
-          "ML-KEM": 0.9567567567567568,
-          "RSA": 0.0,
-          "SHA": 0.6,
-          "SLH-DSA": 0.0,
-          "none": 0.6962882096069869
+          "ML-KEM": 1.0,
+          "RSA": 1.0,
+          "SHA": 1.0,
+          "SLH-DSA": 1.0,
+          "none": 0.8643746616134271
         },
         "recall": {
-          "AES": 0.3625,
-          "ECC": 0.0,
-          "ML-DSA": 0.0017543859649122807,
-          "ML-KEM": 0.6276595744680851,
-          "RSA": 0.0,
-          "SHA": 0.15384615384615385,
-          "SLH-DSA": 0.0,
-          "none": 0.9987472596304416
+          "AES": 0.44166666666666665,
+          "ECC": 0.759493670886076,
+          "ML-DSA": 0.887719298245614,
+          "ML-KEM": 0.8191489361702128,
+          "RSA": 0.8913043478260869,
+          "SHA": 0.717948717948718,
+          "SLH-DSA": 0.17142857142857143,
+          "none": 1.0
         },
         "support": {
           "AES": 240,
@@ -510,35 +350,35 @@
       },
       "gcc-12": {
         "asserted": {
-          "AES": 115,
-          "ECC": 0,
-          "ML-DSA": 1,
-          "ML-KEM": 197,
-          "RSA": 0,
-          "SHA": 10,
-          "SLH-DSA": 0,
-          "none": 4524
+          "AES": 122,
+          "ECC": 166,
+          "ML-DSA": 506,
+          "ML-KEM": 229,
+          "RSA": 82,
+          "SHA": 28,
+          "SLH-DSA": 36,
+          "none": 3678
         },
-        "none_false_positive_rate": 0.001251172972843051,
+        "none_false_positive_rate": 0.0,
         "precision": {
           "AES": 1.0,
-          "ECC": 0.0,
+          "ECC": 1.0,
           "ML-DSA": 1.0,
-          "ML-KEM": 0.9543147208121827,
-          "RSA": 0.0,
-          "SHA": 0.6,
-          "SLH-DSA": 0.0,
-          "none": 0.7057913351016799
+          "ML-KEM": 1.0,
+          "RSA": 1.0,
+          "SHA": 1.0,
+          "SLH-DSA": 1.0,
+          "none": 0.8692224034801522
         },
         "recall": {
-          "AES": 0.4811715481171548,
-          "ECC": 0.0,
-          "ML-DSA": 0.0017543859649122807,
-          "ML-KEM": 0.6714285714285714,
-          "RSA": 0.0,
-          "SHA": 0.15384615384615385,
-          "SLH-DSA": 0.0,
-          "none": 0.9987488270253363
+          "AES": 0.5104602510460251,
+          "ECC": 0.7545454545454545,
+          "ML-DSA": 0.887719298245614,
+          "ML-KEM": 0.8178571428571428,
+          "RSA": 0.8913043478260869,
+          "SHA": 0.717948717948718,
+          "SLH-DSA": 0.17142857142857143,
+          "none": 1.0
         },
         "support": {
           "AES": 239,
@@ -553,45 +393,45 @@
       },
       "gcc-13": {
         "asserted": {
-          "AES": 112,
-          "ECC": 0,
-          "ML-DSA": 1,
-          "ML-KEM": 183,
-          "RSA": 0,
-          "SHA": 10,
-          "SLH-DSA": 0,
-          "none": 4594
+          "AES": 121,
+          "ECC": 182,
+          "ML-DSA": 506,
+          "ML-KEM": 227,
+          "RSA": 82,
+          "SHA": 28,
+          "SLH-DSA": 36,
+          "none": 3718
         },
-        "none_false_positive_rate": 0.001238006865605712,
+        "none_false_positive_rate": 0.00030998140573501587,
         "precision": {
           "AES": 1.0,
-          "ECC": 0.0,
+          "ECC": 1.0,
           "ML-DSA": 1.0,
-          "ML-KEM": 0.9508196721311475,
-          "RSA": 0.0,
-          "SHA": 0.6,
-          "SLH-DSA": 0.0,
-          "none": 0.7024379625598607
+          "ML-KEM": 1.0,
+          "RSA": 1.0,
+          "SHA": 0.9642857142857143,
+          "SLH-DSA": 1.0,
+          "none": 0.8674018289402905
         },
         "recall": {
-          "AES": 0.4686192468619247,
-          "ECC": 0.0,
-          "ML-DSA": 0.0017543859649122807,
-          "ML-KEM": 0.6258992805755396,
-          "RSA": 0.0,
-          "SHA": 0.15384615384615385,
-          "SLH-DSA": 0.0,
-          "none": 0.9987619931909626
+          "AES": 0.5062761506276151,
+          "ECC": 0.7338709677419355,
+          "ML-DSA": 0.887719298245614,
+          "ML-KEM": 0.8165467625899281,
+          "RSA": 0.8723404255319149,
+          "SHA": 0.7714285714285715,
+          "SLH-DSA": 0.17142857142857143,
+          "none": 0.9996900185988841
         },
         "support": {
           "AES": 239,
-          "ECC": 239,
+          "ECC": 248,
           "ML-DSA": 570,
           "ML-KEM": 278,
           "RSA": 94,
-          "SHA": 39,
+          "SHA": 35,
           "SLH-DSA": 210,
-          "none": 3231
+          "none": 3226
         }
       }
     },
@@ -599,33 +439,33 @@
       "-O0": {
         "asserted": {
           "AES": 192,
-          "ECC": 0,
-          "ML-DSA": 6,
-          "ML-KEM": 504,
-          "RSA": 0,
-          "SHA": 0,
-          "SLH-DSA": 0,
-          "none": 5262
+          "ECC": 288,
+          "ML-DSA": 504,
+          "ML-KEM": 240,
+          "RSA": 108,
+          "SHA": 36,
+          "SLH-DSA": 12,
+          "none": 4584
         },
         "none_false_positive_rate": 0.0,
         "precision": {
           "AES": 1.0,
-          "ECC": 0.0,
-          "ML-DSA": 0.5,
-          "ML-KEM": 0.9305555555555556,
-          "RSA": 0.0,
-          "SHA": 0.0,
-          "SLH-DSA": 0.0,
-          "none": 0.7137970353477765
+          "ECC": 1.0,
+          "ML-DSA": 1.0,
+          "ML-KEM": 1.0,
+          "RSA": 1.0,
+          "SHA": 1.0,
+          "SLH-DSA": 1.0,
+          "none": 0.819371727748691
         },
         "recall": {
           "AES": 0.6153846153846154,
-          "ECC": 0.0,
-          "ML-DSA": 0.003968253968253968,
-          "ML-KEM": 0.9532520325203252,
-          "RSA": 0.0,
-          "SHA": 0.0,
-          "SLH-DSA": 0.0,
+          "ECC": 0.9230769230769231,
+          "ML-DSA": 0.6666666666666666,
+          "ML-KEM": 0.4878048780487805,
+          "RSA": 0.9,
+          "SHA": 1.0,
+          "SLH-DSA": 0.06666666666666667,
           "none": 1.0
         },
         "support": {
@@ -641,34 +481,34 @@
       },
       "-O1": {
         "asserted": {
-          "AES": 161,
-          "ECC": 0,
-          "ML-DSA": 0,
-          "ML-KEM": 224,
-          "RSA": 0,
-          "SHA": 3,
-          "SLH-DSA": 0,
-          "none": 5707
+          "AES": 162,
+          "ECC": 192,
+          "ML-DSA": 693,
+          "ML-KEM": 388,
+          "RSA": 102,
+          "SHA": 45,
+          "SLH-DSA": 60,
+          "none": 4453
         },
         "none_false_positive_rate": 0.0,
         "precision": {
           "AES": 1.0,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
+          "ECC": 1.0,
+          "ML-DSA": 1.0,
           "ML-KEM": 1.0,
-          "RSA": 0.0,
+          "RSA": 1.0,
           "SHA": 1.0,
-          "SLH-DSA": 0.0,
-          "none": 0.6749605747327843
+          "SLH-DSA": 1.0,
+          "none": 0.8650348079946104
         },
         "recall": {
-          "AES": 0.5015576323987538,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
-          "ML-KEM": 0.5685279187817259,
-          "RSA": 0.0,
-          "SHA": 0.05263157894736842,
-          "SLH-DSA": 0.0,
+          "AES": 0.5046728971962616,
+          "ECC": 0.5962732919254659,
+          "ML-DSA": 0.9665271966527197,
+          "ML-KEM": 0.9847715736040609,
+          "RSA": 0.8947368421052632,
+          "SHA": 0.7894736842105263,
+          "SLH-DSA": 0.18867924528301888,
           "none": 1.0
         },
         "support": {
@@ -684,120 +524,120 @@
       },
       "-O2": {
         "asserted": {
-          "AES": 150,
-          "ECC": 0,
-          "ML-DSA": 0,
-          "ML-KEM": 157,
-          "RSA": 0,
-          "SHA": 15,
-          "SLH-DSA": 0,
-          "none": 5951
+          "AES": 161,
+          "ECC": 230,
+          "ML-DSA": 628,
+          "ML-KEM": 324,
+          "RSA": 111,
+          "SHA": 44,
+          "SLH-DSA": 69,
+          "none": 4706
         },
-        "none_false_positive_rate": 0.0014326648088172078,
+        "none_false_positive_rate": 0.00023889154545031488,
         "precision": {
           "AES": 1.0,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
+          "ECC": 1.0,
+          "ML-DSA": 1.0,
           "ML-KEM": 1.0,
-          "RSA": 0.0,
-          "SHA": 0.6,
-          "SLH-DSA": 0.0,
-          "none": 0.7027390354562258
+          "RSA": 1.0,
+          "SHA": 0.9772727272727273,
+          "SLH-DSA": 1.0,
+          "none": 0.8892902677433064
         },
         "recall": {
-          "AES": 0.5050505050505051,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
-          "ML-KEM": 0.47575757575757577,
-          "RSA": 0.0,
-          "SHA": 0.16071428571428573,
-          "SLH-DSA": 0.0,
-          "none": 0.998567335243553
+          "AES": 0.5420875420875421,
+          "ECC": 0.7903780068728522,
+          "ML-DSA": 0.9631901840490797,
+          "ML-KEM": 0.9818181818181818,
+          "RSA": 0.9024390243902439,
+          "SHA": 0.7818181818181819,
+          "SLH-DSA": 0.20353982300884957,
+          "none": 0.9997611084567606
         },
         "support": {
           "AES": 297,
-          "ECC": 288,
+          "ECC": 291,
           "ML-DSA": 652,
           "ML-KEM": 330,
           "RSA": 123,
-          "SHA": 56,
+          "SHA": 55,
           "SLH-DSA": 339,
-          "none": 4188
+          "none": 4186
         }
       },
       "-O3": {
         "asserted": {
-          "AES": 96,
-          "ECC": 0,
-          "ML-DSA": 0,
-          "ML-KEM": 187,
-          "RSA": 0,
-          "SHA": 18,
-          "SLH-DSA": 0,
-          "none": 6335
-        },
-        "none_false_positive_rate": 0.0013094719033688307,
-        "precision": {
-          "AES": 1.0,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
-          "ML-KEM": 1.0,
-          "RSA": 0.0,
-          "SHA": 0.6666666666666666,
-          "SLH-DSA": 0.0,
-          "none": 0.722336227308603
-        },
-        "recall": {
-          "AES": 0.5106382978723404,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
-          "ML-KEM": 0.5067750677506775,
-          "RSA": 0.0,
-          "SHA": 0.2553191489361702,
-          "SLH-DSA": 0.0,
-          "none": 0.9986905281536447
-        },
-        "support": {
-          "AES": 188,
-          "ECC": 268,
-          "ML-DSA": 712,
-          "ML-KEM": 369,
-          "RSA": 131,
-          "SHA": 47,
-          "SLH-DSA": 339,
-          "none": 4582
-        }
-      },
-      "-Os": {
-        "asserted": {
-          "AES": 157,
-          "ECC": 0,
-          "ML-DSA": 0,
-          "ML-KEM": 224,
-          "RSA": 0,
-          "SHA": 0,
-          "SLH-DSA": 0,
-          "none": 5429
+          "AES": 109,
+          "ECC": 246,
+          "ML-DSA": 706,
+          "ML-KEM": 360,
+          "RSA": 111,
+          "SHA": 38,
+          "SLH-DSA": 69,
+          "none": 4997
         },
         "none_false_positive_rate": 0.0,
         "precision": {
           "AES": 1.0,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
+          "ECC": 1.0,
+          "ML-DSA": 1.0,
           "ML-KEM": 1.0,
-          "RSA": 0.0,
-          "SHA": 0.0,
-          "SLH-DSA": 0.0,
-          "none": 0.7001289371891692
+          "RSA": 1.0,
+          "SHA": 1.0,
+          "SLH-DSA": 1.0,
+          "none": 0.9163498098859315
         },
         "recall": {
-          "AES": 0.5032051282051282,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
-          "ML-KEM": 0.6666666666666666,
-          "RSA": 0.0,
-          "SHA": 0.0,
-          "SLH-DSA": 0.0,
+          "AES": 0.5797872340425532,
+          "ECC": 0.8978102189781022,
+          "ML-DSA": 0.9915730337078652,
+          "ML-KEM": 0.975609756097561,
+          "RSA": 0.8473282442748091,
+          "SHA": 0.8636363636363636,
+          "SLH-DSA": 0.20353982300884957,
+          "none": 1.0
+        },
+        "support": {
+          "AES": 188,
+          "ECC": 274,
+          "ML-DSA": 712,
+          "ML-KEM": 369,
+          "RSA": 131,
+          "SHA": 44,
+          "SLH-DSA": 339,
+          "none": 4579
+        }
+      },
+      "-Os": {
+        "asserted": {
+          "AES": 173,
+          "ECC": 180,
+          "ML-DSA": 629,
+          "ML-KEM": 318,
+          "RSA": 96,
+          "SHA": 36,
+          "SLH-DSA": 42,
+          "none": 4336
+        },
+        "none_false_positive_rate": 0.0,
+        "precision": {
+          "AES": 1.0,
+          "ECC": 1.0,
+          "ML-DSA": 1.0,
+          "ML-KEM": 1.0,
+          "RSA": 1.0,
+          "SHA": 1.0,
+          "SLH-DSA": 1.0,
+          "none": 0.8766143911439115
+        },
+        "recall": {
+          "AES": 0.5544871794871795,
+          "ECC": 0.5882352941176471,
+          "ML-DSA": 0.9374068554396423,
+          "ML-KEM": 0.9464285714285714,
+          "RSA": 0.8888888888888888,
+          "SHA": 1.0,
+          "SLH-DSA": 0.175,
           "none": 1.0
         },
         "support": {
@@ -813,34 +653,34 @@
       },
       "-Oz": {
         "asserted": {
-          "AES": 90,
-          "ECC": 0,
-          "ML-DSA": 0,
-          "ML-KEM": 140,
-          "RSA": 0,
-          "SHA": 3,
-          "SLH-DSA": 0,
-          "none": 2615
+          "AES": 93,
+          "ECC": 90,
+          "ML-DSA": 297,
+          "ML-KEM": 174,
+          "RSA": 48,
+          "SHA": 18,
+          "SLH-DSA": 12,
+          "none": 2116
         },
         "none_false_positive_rate": 0.0,
         "precision": {
           "AES": 1.0,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
+          "ECC": 1.0,
+          "ML-DSA": 1.0,
           "ML-KEM": 1.0,
-          "RSA": 0.0,
+          "RSA": 1.0,
           "SHA": 1.0,
-          "SLH-DSA": 0.0,
-          "none": 0.7173996175908222
+          "SLH-DSA": 1.0,
+          "none": 0.8865784499054821
         },
         "recall": {
-          "AES": 0.5882352941176471,
-          "ECC": 0.0,
-          "ML-DSA": 0.0,
-          "ML-KEM": 0.7291666666666666,
-          "RSA": 0.0,
-          "SHA": 0.16666666666666666,
-          "SLH-DSA": 0.0,
+          "AES": 0.6078431372549019,
+          "ECC": 0.6,
+          "ML-DSA": 0.9252336448598131,
+          "ML-KEM": 0.90625,
+          "RSA": 0.8888888888888888,
+          "SHA": 1.0,
+          "SLH-DSA": 0.14285714285714285,
           "none": 1.0
         },
         "support": {
@@ -869,7 +709,7 @@
       "libsodium"
     ],
     "test": 33626,
-    "train": 22586,
+    "train": 23151,
     "validation": 21294,
     "validation_sources": [
       "PQClean",
@@ -886,28 +726,28 @@
   },
   "support": {
     "AES": 1583,
-    "ECC": 1646,
+    "ECC": 1655,
     "ML-DSA": 3829,
     "ML-KEM": 2113,
     "RSA": 650,
-    "SHA": 250,
+    "SHA": 246,
     "SLH-DSA": 1500,
-    "none": 22055
+    "none": 22050
   },
-  "temperature": 12.412664413452148,
+  "temperature": 10.126763343811035,
   "thresholds": {
     "AES": 1.1,
     "ECC": 1.1,
     "ML-DSA": 1.1,
-    "ML-KEM": 0.22153526544570923,
+    "ML-KEM": 0.002379055367782712,
     "RSA": 1.1,
     "SHA": 1.1,
     "SLH-DSA": 1.1
   },
   "validation_selection": [
     1,
-    0.10484250117536437,
+    0.11330512458862248,
     -0.0008110299822874367,
-    -8.141491889953613
+    -6.539133071899414
   ]
 }

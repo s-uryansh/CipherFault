@@ -7,6 +7,7 @@ commit="d85ca029f257b53a96da6c2fb421e78a003a9943"
 build_dir="${TMPDIR:-/tmp}/cipherfault-uboot-cve-2017-3225-build"
 reference="$case_dir/target_uboot_cve_2017_3225_reference.o"
 target="$case_dir/target_uboot_cve_2017_3225.o"
+allstrip_target="$case_dir/target_uboot_cve_2017_3225_allstrip.o"
 
 mkdir -p "$case_dir"
 if [ ! -d "$source_dir/.git" ]; then
@@ -23,3 +24,5 @@ make -C "$source_dir" O="$build_dir" lib/aes.o cmd/aes.o
 ld -r "$build_dir/cmd/aes.o" "$build_dir/lib/aes.o" -o "$reference"
 cp "$reference" "$target"
 strip --strip-debug "$target"
+cp "$reference" "$allstrip_target"
+strip --strip-all "$allstrip_target"

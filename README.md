@@ -17,25 +17,6 @@ CipherFault is **not a vulnerability detector** and makes **no exploitability cl
 Exploitability depends on runtime and protocol context that a binary alone does not
 provide.
 
-## Current completion
-
-Overall engineering completion against the full project specification is **74%**.
-This is not a release-readiness claim.
-
-| Area | Status | Completion |
-|---|---|---:|
-| Compiler/architecture corpus | 9,240 successful artifacts across GCC 11/12/13, Clang 15/16/17, x86_64, AArch64, and O0-Oz where supported | 95% |
-| Deterministic scanner and provenance | API anchors, conservative bounded caller/return flow, buffer-copy/fill flow, temporal last-writer checks, explicit closed recognizer fallback | 90% |
-| Tier-1 verified facts | AES modes, key/IV origin, implicit zero IV, RNG origin, weak RNG, digest weakness, RSA/ECC/PQC parameters | 80% |
-| Tier-2 indicators | Separate RNG-quality, repeated-operand, and verification-outcome analyst questions | 70% |
-| Eight-class recognizer | Precision-gated artifacts are built for AES and ML-KEM; all-class source-heldout gate still fails for RSA/ECC/SHA/ML-DSA/SLH-DSA | 62% |
-| Independent/CVE evaluation | Local/negative/demo manifests plus U-Boot CVE-2017-3225 zero-IV gate | 60% |
-| Packaging, CI, docs, and release | Wheel/CI/container foundations exist; local model artifacts are generated; release artifact distribution, full platform matrix, release signing, and final audits remain | 60% |
-
-The remaining critical path is the eight-class recognizer deployment gate, broader
-real-binary/CVE recall evaluation, broader static-anchor validation, platform expansion beyond Linux ELF,
-release packaging, and final security/scientific/legal review.
-
 ## Evidence tiers
 
 The tiers are structurally separate in JSON and CBOM output.
@@ -74,7 +55,7 @@ Ghidra P-code + CFG/DFG lifting
         +-------------------------------+
         v                               v
 Static/API fingerprint anchors     Eight-class region recognizer
-                                   (training gate in progress)
+                                   (precision-gated)
         |                               |
         +---------------+---------------+
                         v
@@ -91,9 +72,9 @@ Static/API fingerprint anchors     Eight-class region recognizer
 ```
 
 The recognizer classifies regions as `AES`, `RSA`, `ECC`, `SHA`, `ML-KEM`,
-`ML-DSA`, `SLH-DSA`, or `none`. The new eight-class model is not considered deployed
-until source-family-held-out precision, calibration, architecture, compiler, and
-optimization gates pass. Existing model artifacts are earlier experimental baselines.
+`ML-DSA`, `SLH-DSA`, or `none`. Runtime assertions are restricted to labels that
+pass the source-family-held-out precision gate recorded in
+`models/recognizer.metrics.json`. The current artifact passes that all-class gate.
 
 ## Installation
 
@@ -152,7 +133,7 @@ yet supported.
 
 ## Corpus and recognizer
 
-The current matrix contains **9,240 successful artifacts**:
+The current matrix contains **9,295 successful artifacts**:
 
 - GCC 11, 12, and 13; Clang 15, 16, and 17.
 - x86_64 and AArch64.
@@ -179,15 +160,20 @@ python scripts/train_recognizer.py
 python scripts/check_recognizer_artifacts.py --require-artifacts --require-all-class
 ```
 
-TODO: recognizer completion run. Dataset generation is resource-heavy; training is CPU-only
-today. The current artifacts are precision-gated and deployable only for labels listed
-in `models/recognizer.metrics.json` under `deployable_labels` (`AES` and `ML-KEM` in the current
-run). The all-class source-heldout gate remains recorded separately as
-`all_class_gate_passed`.
+See [REPRODUCIBILITY.md](REPRODUCIBILITY.md) for pinned source revisions, toolchain
+checksums, and expected gate outputs for the current baseline.
+
+The current recognizer baseline run produced 78,071 regions. Dataset generation is
+resource-heavy and training is CPU-only today. The current artifacts are
+precision-gated and deployable only for labels listed in
+`models/recognizer.metrics.json` under `deployable_labels`. In the current run, the
+all-class source-heldout gate passes for AES, RSA, ECC, SHA, ML-KEM, ML-DSA, and
+SLH-DSA.
 
 When at least one label is precision-gated, `scripts/train_recognizer.py` writes
-`models/recognizer.pt` and `models/recognizer.semantic.joblib`. Unsupported labels keep
-threshold `1.1`, so runtime will not assert them. To use an already-built model outside
+`models/recognizer.pt` and `models/recognizer.semantic.joblib`. Some classes are
+gated by a conservative symbol-name head; those assertions require matching symbol or
+fingerprint-equivalent name evidence at runtime. To use an already-built model outside
 `models/`, set:
 
 ```bash
@@ -196,12 +182,17 @@ export CIPHERFAULT_RECOGNIZER_MODEL=/path/to/recognizer.pt
 
 ## Evaluation
 
-Current manifests contain nine local positive cases, six negative-control cases,
-one independently sourced demo, and one genuine CVE gate for U-Boot CVE-2017-3225.
+Current manifests contain nine local positive cases, six negative-control cases, one
+MITRE CWE-329 external-reference case, one public real-code negative case, two public
+liboqs PQC example cases, one independently sourced demo, and one genuine CVE gate for
+U-Boot CVE-2017-3225.
 
 ```bash
 python scripts/evaluate_manifest.py corpus/eval/manifest.local.json
 python scripts/evaluate_manifest.py corpus/eval/manifest.negative.json
+python scripts/evaluate_manifest.py corpus/eval/manifest.external.json
+python scripts/evaluate_manifest.py corpus/eval/manifest.real.json
+python scripts/evaluate_manifest.py corpus/eval/manifest.pqc.json
 python scripts/evaluate_manifest.py corpus/eval/manifest.demo.json
 bash scripts/build_cve_fixtures.sh
 python scripts/evaluate_manifest.py corpus/eval/manifest.cve.json
@@ -220,9 +211,10 @@ python -m pytest -q tests
 bash scripts/verify.sh
 ```
 
-The full release-style check currently passes with 119 tests, local/negative/CVE/demo
-manifest evaluation, wheel install, and SBOM generation. The all-class recognizer gate
-still requires a separate heavy training/evaluation run.
+The full release-style check currently passes with local/negative/external/real/PQC/CVE/demo
+manifest evaluation, positive-manifest recall thresholds, wheel install, offline SBOM
+generation, the expected-limitation check, and the all-class recognizer gate checked
+with `--require-all-class`.
 
 The Docker image installs the core scanner by default. To include learned-recognizer
 dependencies in an image, build with:

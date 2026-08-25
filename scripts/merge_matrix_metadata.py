@@ -23,7 +23,7 @@ def artifact_matches_arch(path: Path, arch: str) -> bool:
     return len(header) == 20 and header[:6] == b"\x7fELF\x02\x01" and struct.unpack_from("<H", header, 18)[0] == {"x86_64": 62, "aarch64": 183}[arch]
 
 
-def merge(paths: list[Path]) -> list[dict]:
+def merge(paths: list[Path], allow_partial_source_counts: bool = False) -> list[dict]:
     rows = [json.loads(line) for path in paths for line in path.read_text(encoding="utf-8").splitlines()]
     failed = [row for row in rows if row["status"] != "ok"]
     if failed:
@@ -44,7 +44,7 @@ def merge(paths: list[Path]) -> list[dict]:
     if actual != expected:
         raise ValueError(f"matrix coverage mismatch: missing={sorted(expected - actual)} extra={sorted(actual - expected)}")
     counts = {len({row["source_file"] for row in rows if row["compiler"] == compiler and row["arch"] == arch and row["opt"] == opt}) for compiler, arch, opt in expected}
-    if len(counts) != 1:
+    if len(counts) != 1 and not allow_partial_source_counts:
         raise ValueError(f"matrix shards disagree on source count: {sorted(counts)}")
     return sorted(rows, key=lambda row: (row["arch"], row["compiler"], row["opt"], row["source_file"]))
 
@@ -53,8 +53,13 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("shards", nargs="+", type=Path)
     parser.add_argument("--output", type=Path, default=Path("corpus/build/matrix/metadata.jsonl"))
+    parser.add_argument(
+        "--allow-partial-source-counts",
+        action="store_true",
+        help="merge valid shards even when some compiler slices were regenerated with additional sources",
+    )
     args = parser.parse_args()
-    rows = merge(args.shards)
+    rows = merge(args.shards, allow_partial_source_counts=args.allow_partial_source_counts)
     args.output.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in rows), encoding="utf-8")
     print(f"[+] wrote {args.output} rows={len(rows)}")
     return 0

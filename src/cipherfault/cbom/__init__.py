@@ -6,6 +6,7 @@ import json
 from dataclasses import asdict
 from datetime import datetime, timezone
 from hashlib import sha256
+from importlib.resources import files
 from pathlib import Path
 from tempfile import gettempdir
 from urllib.request import urlopen
@@ -28,6 +29,10 @@ def validate_cbom(document: dict, schema_path: str | Path = SCHEMA_CACHE) -> Non
 
 
 def _official_schema(cache_path: Path) -> bytes:
+    bundled = files("cipherfault.cbom").joinpath("schemas/bom-1.6.schema.json").read_bytes()
+    if sha256(bundled).hexdigest() == SCHEMA_SHA256:
+        return bundled
+
     if cache_path.exists():
         cached = cache_path.read_bytes()
         if sha256(cached).hexdigest() == SCHEMA_SHA256:

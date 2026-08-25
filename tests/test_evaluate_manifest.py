@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0, "scripts")
 
 import evaluate_manifest as evaluator
-from evaluate_manifest import evaluate_entry, summarize
+from evaluate_manifest import evaluate_entry, main, summarize
 from cipherfault.report import AnalysisReport
 
 def test_evaluate_entry_counts_hits_and_misses():
@@ -110,3 +110,25 @@ def test_parameter_expectations_are_distinguished_by_origin():
 
     assert result["hits"] == 1
     assert result["misses"][0]["origin"] == "SLH-DSA-SHA2-128s"
+
+
+def test_main_enforces_minimum_recall(tmp_path, monkeypatch, capsys):
+    path = tmp_path / "manifest.json"
+    path.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(
+        evaluator,
+        "evaluate_manifest",
+        lambda _path: {
+            "success": True,
+            "recall": 0.5,
+            "cases": 1,
+            "expected": 2,
+            "hits": 1,
+            "misses": 1,
+            "false_positives": 0,
+            "results": [],
+        },
+    )
+
+    assert main([str(path), "--min-recall", "1.0"]) == 1
+    assert "below required" in capsys.readouterr().err

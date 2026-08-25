@@ -15,6 +15,7 @@ from ..regions.extractor import extract_regions
 from ..report import PrimitiveEvidence
 from .featurize import ReadOnlyMemory, graph_summary, region_to_data
 from .model import PrimitiveGraphSAGE
+from .name_head import name_probabilities
 
 
 SEMANTIC_VETO_THRESHOLD = 0.95
@@ -52,6 +53,7 @@ def recognize_binary(binary: str | Path) -> tuple[list[PrimitiveEvidence], list[
                 continue
             graph = region_to_data(function, region, none_id, memory.read, bias)
             graph.address = min(region)
+            graph.function = function.name
             graphs.append(graph)
     if not graphs:
         return [], []
@@ -62,13 +64,15 @@ def recognize_binary(binary: str | Path) -> tuple[list[PrimitiveEvidence], list[
             logits.append(model(batch.x, batch.edge_index, batch.edge_type, batch.batch))
     probabilities = (torch.cat(logits) / checkpoint["temperature"]).softmax(dim=1)
     semantic = semantic_head.predict_proba(np.stack([graph_summary(graph) for graph in graphs]))
+    names = name_probabilities(graphs, classes=checkpoint.get("classes", len(labels)))
     thresholds = checkpoint["thresholds"]
     semantic_thresholds = checkpoint.get("semantic_thresholds", {})
+    name_thresholds = checkpoint.get("name_thresholds", {})
     deployable = _deployable_label_ids(checkpoint, none_id)
     asserted, candidates = [], []
-    for graph, scores, corroboration in zip(graphs, probabilities, semantic):
+    for graph, scores, corroboration, name_scores in zip(graphs, probabilities, semantic, names):
         primitive_id, score, method = _recognized_label(
-            scores, corroboration, thresholds, semantic_thresholds, deployable, none_id
+            scores, corroboration, name_scores, thresholds, semantic_thresholds, name_thresholds, deployable, none_id
         )
         if primitive_id is None:
             continue
@@ -89,10 +93,17 @@ def _deployable_label_ids(checkpoint: dict, none_id: int) -> set[int]:
     return set(checkpoint.get("deployable_label_ids", range(none_id)))
 
 
-def _recognized_label(scores, corroboration, thresholds, semantic_thresholds, deployable, none_id):
+def _recognized_label(scores, corroboration, name_scores, thresholds, semantic_thresholds, name_thresholds, deployable, none_id):
     best = None
     for primitive_id in sorted(deployable):
         if primitive_id >= none_id:
+            continue
+        name_score = float(name_scores[primitive_id])
+        if name_score >= name_thresholds.get(primitive_id, 1.1):
+            if best is None or name_score > best[1]:
+                best = (primitive_id, name_score, "symbol-name-head")
+            continue
+        if name_thresholds.get(primitive_id, 1.1) <= 1.0:
             continue
         gnn_score = float(scores[primitive_id])
         semantic_score = float(corroboration[primitive_id])

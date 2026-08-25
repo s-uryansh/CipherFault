@@ -114,11 +114,11 @@ def anchor_spec(callee: str | None) -> dict | None:
             "variant": f"ML-KEM-{match.group(1)}",
             "operands": operands,
         }
-    match = re.search(r"ML[_-]?DSA[_-]?(44|65|87).*crypto_sign", callee or "", re.IGNORECASE)
+    match = re.search(r"(?:ML[_-]?DSA|mldsa)[_-]?(44|65|87).*(?:crypto_sign|sign)", callee or "", re.IGNORECASE)
     if match:
         return {"primitive": "ML-DSA", "variant": f"ML-DSA-{match.group(1)}", "operands": {}}
     match = re.search(
-        r"SLH[_-]?DSA[_-]?(SHA2|SHAKE)[_-]?(128|192|256)[_-]?([SF]).*crypto_sign",
+        r"(?:SLH[_-]?DSA|slhdsa)[_-]?(SHA2|SHAKE)[_-]?(128|192|256)[_-]?([SF]).*(?:crypto_sign|sign)",
         callee or "",
         re.IGNORECASE,
     )

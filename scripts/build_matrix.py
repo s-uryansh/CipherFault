@@ -117,6 +117,29 @@ def jobs(arch: str) -> list[dict]:
             ],
             "include_symbol_patterns": ["(?i)(setkey|internal_aes|gen_tables)"],
         },
+        *[
+            {
+                "source": f"mbedtls-{label.lower()}",
+                "repo": "mbedtls",
+                "path": f"corpus/external/mbedtls/tf-psa-crypto/drivers/builtin/src/{name}",
+                "language": "c",
+                "labels": [label],
+                "includes": [
+                    "corpus/external/mbedtls/tf-psa-crypto/include",
+                    "corpus/external/mbedtls/tf-psa-crypto/core",
+                    "corpus/external/mbedtls/tf-psa-crypto/drivers/builtin/include",
+                    "corpus/external/mbedtls/tf-psa-crypto/drivers/builtin/src",
+                    "corpus/external/mbedtls/tf-psa-crypto/utilities",
+                ],
+            }
+            for label, name in [
+                ("RSA", "rsa.c"),
+                ("ECC", "ecp.c"),
+                ("SHA", "sha1.c"),
+                ("SHA", "sha256.c"),
+                ("SHA", "sha512.c"),
+            ]
+        ],
         {
             "source": "tiny-AES-c", "path": "corpus/external/tiny-AES-c/aes.c",
             "language": "c", "labels": ["AES"], "includes": ["corpus/external/tiny-AES-c"],
@@ -126,6 +149,31 @@ def jobs(arch: str) -> list[dict]:
             "source": "wolfssl", "path": "corpus/external/wolfssl/wolfcrypt/src/aes.c",
             "language": "c", "labels": ["AES"], "includes": ["corpus/external/wolfssl"],
             "include_symbol_patterns": ["(?i)(Aes(SetKey|Encrypt|Decrypt|Cbc)|AES_(set|encrypt|decrypt))"],
+        },
+        *[
+            {
+                "source": f"wolfssl-{label.lower()}",
+                "repo": "wolfssl",
+                "path": f"corpus/external/wolfssl/wolfcrypt/src/{name}",
+                "language": "c",
+                "labels": [label],
+                "includes": ["corpus/external/wolfssl"],
+            }
+            for label, name in [
+                ("RSA", "rsa.c"),
+                ("ECC", "ecc.c"),
+                ("SHA", "sha.c"),
+                ("SHA", "sha256.c"),
+                ("SHA", "sha512.c"),
+            ]
+        ],
+        {
+            "source": "aws-lc-ecc",
+            "repo": "aws-lc",
+            "path": "corpus/external/aws-lc/crypto/fipsmodule/ec/ec.c",
+            "language": "c",
+            "labels": ["ECC"],
+            "includes": [".", "corpus/external/aws-lc/include", "corpus/external/aws-lc/crypto"],
         },
     ]
     common += [{

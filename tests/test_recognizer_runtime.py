@@ -45,18 +45,39 @@ def test_recognized_label_uses_semantic_fallback_for_deployable_label():
     assert _recognized_label(
         scores,
         semantic,
+        torch.zeros(8),
         {label: 0.9 for label in range(7)},
         {0: 0.95},
+        {},
         {0},
         7,
     ) == (0, pytest.approx(0.96), "semantic-head")
+
+
+def test_recognized_label_uses_precision_gated_symbol_name_head():
+    scores = torch.tensor([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.3])
+    semantic = torch.tensor([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.3])
+    names = torch.tensor([0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+    assert _recognized_label(scores, semantic, names, {}, {}, {1: 1.0}, {1}, 7) == (
+        1,
+        pytest.approx(1.0),
+        "symbol-name-head",
+    )
+
+
+def test_recognized_label_requires_name_match_for_name_gated_label():
+    scores = torch.tensor([0.1, 0.99, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+    semantic = torch.tensor([0.1, 0.99, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+
+    assert _recognized_label(scores, semantic, torch.zeros(8), {1: 0.9}, {1: 0.9}, {1: 1.0}, {1}, 7)[0] is None
 
 
 def test_recognized_label_ignores_undeployable_labels():
     scores = torch.tensor([0.99, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
     semantic = torch.tensor([0.99, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
 
-    assert _recognized_label(scores, semantic, {0: 0.9}, {}, set(), 7)[0] is None
+    assert _recognized_label(scores, semantic, torch.zeros(8), {0: 0.9}, {}, {}, set(), 7)[0] is None
 
 
 def test_read_only_memory_accepts_relocatable_elf_without_load_segments(tmp_path):
@@ -138,3 +159,18 @@ def test_recognizer_artifact_check_can_require_all_class_gate(monkeypatch, tmp_p
 
     with pytest.raises(SystemExit, match="RSA precision=0.0 required=0.95"):
         check_recognizer_artifacts.main(["--require-all-class"])
+
+
+def test_recognizer_artifact_check_rejects_inconsistent_all_class_metrics(monkeypatch, tmp_path):
+    models = tmp_path / "models"
+    models.mkdir()
+    metrics = _passed_metrics()
+    metrics["all_class_gate_passed"] = True
+    metrics["gate_failures"] = [
+        {"label": "SHA", "metric": "compiler:gcc-13.precision", "observed": 0.9, "required": 0.95}
+    ]
+    (models / "recognizer.metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
+    monkeypatch.setattr(check_recognizer_artifacts, "ROOT", tmp_path)
+
+    with pytest.raises(SystemExit, match="all-class gate passed with failures"):
+        check_recognizer_artifacts.main([])

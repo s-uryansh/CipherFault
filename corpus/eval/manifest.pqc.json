@@ -1,0 +1,30 @@
+[
+  {
+    "id": "LIBOQS-EXAMPLE-KEM-MLKEM768",
+    "source_url": "https://github.com/open-quantum-safe/liboqs",
+    "source_commit": "8979276ad1eb008215aa78a3c56b3649f604bbb1",
+    "binary": "corpus/eval/LIBOQS-EXAMPLES/target_example_kem_strip.o",
+    "expected_facts": [
+      {
+        "fact_type": "parameter_set",
+        "cwe": "None",
+        "origin": "ML-KEM-768"
+      }
+    ],
+    "notes": "Focused object build of upstream tests/example_kem.c using a minimal compatibility header; validates liboqs ML-KEM API-symbol recognition without a heavyweight full-library Ghidra scan."
+  },
+  {
+    "id": "LIBOQS-EXAMPLE-SIG-MLDSA65",
+    "source_url": "https://github.com/open-quantum-safe/liboqs",
+    "source_commit": "8979276ad1eb008215aa78a3c56b3649f604bbb1",
+    "binary": "corpus/eval/LIBOQS-EXAMPLES/target_example_sig_strip.o",
+    "expected_facts": [
+      {
+        "fact_type": "parameter_set",
+        "cwe": "None",
+        "origin": "ML-DSA-65"
+      }
+    ],
+    "notes": "Focused object build of upstream tests/example_sig.c using a minimal compatibility header; validates liboqs ML-DSA API-symbol recognition."
+  }
+]

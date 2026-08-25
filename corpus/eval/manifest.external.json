@@ -1,0 +1,18 @@
+[
+  {
+    "id": "CWE-329-MITRE-STATIC-IV",
+    "source_url": "https://cwe.mitre.org/data/definitions/329.html",
+    "binary": "corpus/eval/CWE-329-MITRE/target_strip",
+    "expected_facts": [
+      {
+        "fact_type": "static_iv",
+        "cwe": "CWE-329"
+      },
+      {
+        "fact_type": "hardcoded_key",
+        "cwe": "CWE-321"
+      }
+    ],
+    "notes": "External-reference fixture based on MITRE CWE-329's CBC predictable-IV weakness description; source is local minimal C compiled to stripped Linux ELF."
+  }
+]

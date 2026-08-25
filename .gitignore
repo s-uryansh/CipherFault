@@ -33,7 +33,8 @@ corpus/toolchains/
 corpus/eval/**/source/
 corpus/eval/**/target_*
 reports/
-
+!corpus/eval/CWE-329-MITRE/source/
+!corpus/eval/CWE-329-MITRE/source/cwe329_static_iv.c
 # Keep model documentation and metrics, not binary checkpoints
 models/*.pt
 models/*.joblib

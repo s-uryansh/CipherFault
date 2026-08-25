@@ -92,7 +92,7 @@ def main() -> int:
             {key: row.get(key, []) for key in ("labels", "include_symbol_patterns", "exclude_symbol_patterns")},
             sort_keys=True,
         ).encode()
-        cache_key = sha256(b"v13-eight-classes\0" + artifact.encode() + b"\0" + label_config + b"\0" + path.read_bytes()).hexdigest()
+        cache_key = sha256(b"v14-classical-expansion\0" + artifact.encode() + b"\0" + label_config + b"\0" + path.read_bytes()).hexdigest()
         cache_path = CACHE / f"{cache_key}.pt"
         if cache_path.exists():
             graphs = torch.load(cache_path, weights_only=False)

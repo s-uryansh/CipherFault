@@ -70,6 +70,41 @@ def test_matrix_merge_rejects_failed_builds(tmp_path):
         merge([shard])
 
 
+def test_matrix_merge_can_explicitly_allow_partial_source_expansion(monkeypatch):
+    rows = []
+    for compiler in ("gcc-11", "gcc-12", "gcc-13", "clang-15", "clang-16", "clang-17"):
+        for arch in ("x86_64", "aarch64"):
+            opts = ["-O0", "-O1", "-O2", "-O3", "-Os", *(["-Oz"] if compiler.startswith("clang-") else [])]
+            for opt in opts:
+                rows.append({
+                    "status": "ok",
+                    "artifact": "demo",
+                    "arch": arch,
+                    "compiler": compiler,
+                    "opt": opt,
+                    "source_file": "base.c",
+                })
+                if compiler == "gcc-13" and arch == "x86_64":
+                    rows.append({
+                        "status": "ok",
+                        "artifact": "demo-extra",
+                        "arch": arch,
+                        "compiler": compiler,
+                        "opt": opt,
+                        "source_file": "extra.c",
+                    })
+
+    def fake_read_text(_encoding):
+        return "".join(__import__("json").dumps(row) + "\n" for row in rows)
+
+    monkeypatch.setattr("pathlib.Path.read_text", lambda self, encoding=None: fake_read_text(encoding))
+    monkeypatch.setattr("merge_matrix_metadata.artifact_matches_arch", lambda path, arch: True)
+
+    assert len(merge([__import__("pathlib").Path("matrix.jsonl")], allow_partial_source_counts=True)) == len(rows)
+    with pytest.raises(ValueError, match="source count"):
+        merge([__import__("pathlib").Path("matrix.jsonl")])
+
+
 def test_matrix_artifact_architecture_check_reads_elf_machine(tmp_path):
     artifact = tmp_path / "target.so"
     artifact.write_bytes(b"\x7fELF\x02\x01" + b"\0" * 12 + (183).to_bytes(2, "little"))
@@ -127,6 +162,30 @@ def test_combined_predictions_use_independently_gated_semantic_head():
     ).tolist() == [0, 7]
 
 
+def test_combined_predictions_require_name_match_for_name_gated_labels():
+    gnn = torch.tensor([
+        [0.01, 0.96, 0.01, 0.0, 0.01, 0.0, 0.0, 0.02],
+        [0.01, 0.96, 0.01, 0.0, 0.01, 0.0, 0.0, 0.02],
+    ])
+    semantic = torch.tensor([
+        [0.01, 0.97, 0.01, 0.0, 0.0, 0.0, 0.0, 0.02],
+        [0.01, 0.97, 0.01, 0.0, 0.0, 0.0, 0.0, 0.02],
+    ])
+    names = torch.tensor([
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    ])
+
+    assert combined_predictions(
+        gnn,
+        semantic,
+        {label: 0.9 for label in range(7)},
+        {1: 0.9, **{label: 1.1 for label in (0, 2, 3, 4, 5, 6)}},
+        names,
+        {1: 1.0},
+    ).tolist() == [7, 1]
+
+
 def test_threshold_selection_calibrates_after_semantic_veto():
     gnn = torch.tensor([
         [0.99, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01],
@@ -153,6 +212,31 @@ def test_gate_failures_name_blocking_metrics():
 
     assert gate_failures(result) == [
         {"label": "AES", "metric": "precision", "observed": 0.0, "required": 0.95}
+    ]
+
+
+def test_gate_failures_include_supported_slice_precision():
+    result = {
+        "support": {name: 1000 for name in LABELS.values()},
+        "asserted": {name: 1000 for name in LABELS.values()},
+        "precision": {name: 1.0 for name in LABELS.values()},
+        "none_false_positive_rate": 0.0,
+        "slices": {
+            "compiler": {
+                "gcc-13": {
+                    "support": {name: 100 for name in LABELS.values()},
+                    "asserted": {name: 10 for name in LABELS.values()},
+                    "precision": {name: 1.0 for name in LABELS.values()},
+                    "recall": {name: 0.1 for name in LABELS.values()},
+                    "none_false_positive_rate": 0.0,
+                }
+            }
+        },
+    }
+    result["slices"]["compiler"]["gcc-13"]["precision"]["ECC"] = 0.9
+
+    assert gate_failures(result) == [
+        {"label": "ECC", "metric": "compiler:gcc-13.precision", "observed": 0.9, "required": 0.95}
     ]
 
 

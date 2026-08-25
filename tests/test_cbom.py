@@ -53,6 +53,15 @@ def test_report_to_cbom_validates_against_official_schema():
     validate_cbom(report_to_cbom(_report()))
 
 
+def test_validate_cbom_uses_bundled_schema_without_network(monkeypatch, tmp_path):
+    def fail_network(*_args, **_kwargs):
+        raise AssertionError("network should not be used")
+
+    monkeypatch.setattr("cipherfault.cbom.urlopen", fail_network)
+
+    validate_cbom(report_to_cbom(_report()), schema_path=tmp_path / "missing-schema.json")
+
+
 def test_mlkem_asset_carries_parameter_set_identifier():
     report = AnalysisReport(
         target="kem",

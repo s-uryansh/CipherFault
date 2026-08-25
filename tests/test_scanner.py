@@ -73,6 +73,16 @@ def test_uboot_cbc_helper_has_implicit_iv_not_src_operand():
     assert spec["operands"] == {"key": 1}
 
 
+def test_liboqs_signature_api_symbols_are_pqc_anchors():
+    mldsa = anchor_spec("OQS_SIG_ml_dsa_65_sign")
+    slhdsa = anchor_spec("OQS_SIG_slh_dsa_sha2_128s_sign")
+
+    assert mldsa["primitive"] == "ML-DSA"
+    assert mldsa["variant"] == "ML-DSA-65"
+    assert slhdsa["primitive"] == "SLH-DSA"
+    assert slhdsa["variant"] == "SLH-DSA-SHA2-128s"
+
+
 def test_recognizer_artifact_check_requires_model_and_semantic_head(tmp_path):
     model = tmp_path / "recognizer.pt"
     semantic = tmp_path / "recognizer.semantic.joblib"

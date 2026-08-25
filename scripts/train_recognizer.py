@@ -22,6 +22,7 @@ sys.path.insert(0, "src")
 
 from cipherfault.recognizer.model import PrimitiveGraphSAGE
 from cipherfault.recognizer.featurize import graph_summary
+from cipherfault.recognizer.name_head import name_probabilities
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -39,6 +40,7 @@ TEST_SOURCES = {
 }
 MIN_SUPPORT = {**{label: 100 for label in PRIMITIVE_IDS}, NONE_ID: 1000}
 CALIBRATION_PRECISION = 0.95
+SLICE_MIN_SUPPORT = 30
 SEMANTIC_VETO_THRESHOLD = 0.95
 SEED = 17
 
@@ -56,12 +58,42 @@ def ensemble_predictions(gnn_probabilities, semantic_probabilities, thresholds):
     return predicted
 
 
-def combined_predictions(gnn_probabilities, semantic_probabilities, gnn_thresholds, semantic_thresholds):
+def combined_predictions(
+    gnn_probabilities,
+    semantic_probabilities,
+    gnn_thresholds,
+    semantic_thresholds,
+    name_probabilities_=None,
+    name_thresholds=None,
+):
+    name_thresholds = name_thresholds or {}
+    name_gated = {
+        primitive
+        for primitive, threshold in name_thresholds.items()
+        if primitive in PRIMITIVE_IDS and threshold <= 1.0
+    }
     predicted = ensemble_predictions(gnn_probabilities, semantic_probabilities, gnn_thresholds)
+    if name_probabilities_ is not None:
+        for index, primitive in enumerate(predicted):
+            primitive = int(primitive)
+            if primitive in name_gated and float(name_probabilities_[index, primitive]) < name_thresholds[primitive]:
+                predicted[index] = NONE_ID
     semantic_predicted = predictions(semantic_probabilities, semantic_thresholds)
     for index, primitive in enumerate(semantic_predicted):
+        primitive = int(primitive)
         if predicted[index] == NONE_ID and primitive != NONE_ID:
+            if primitive in name_gated and (
+                name_probabilities_ is None
+                or float(name_probabilities_[index, primitive]) < name_thresholds[primitive]
+            ):
+                continue
             predicted[index] = primitive
+    if name_probabilities_ is not None:
+        for index, row in enumerate(name_probabilities_):
+            for primitive in PRIMITIVE_IDS:
+                if float(row[primitive]) >= name_thresholds.get(primitive, 1.1):
+                    predicted[index] = primitive
+                    break
     return predicted
 
 
@@ -153,6 +185,28 @@ def gate_failures(result: dict) -> list[dict]:
             "observed": result["none_false_positive_rate"],
             "required": 0.01,
         })
+    for attribute, slices in result.get("slices", {}).items():
+        for value, slice_result in slices.items():
+            for label in PRIMITIVE_IDS:
+                name = LABELS[label]
+                if slice_result["support"][name] < SLICE_MIN_SUPPORT:
+                    continue
+                if slice_result["asserted"][name] <= 0:
+                    failures.append({
+                        "label": name,
+                        "metric": f"{attribute}:{value}.asserted",
+                        "observed": 0,
+                        "required": ">0",
+                    })
+                    continue
+                precision = slice_result["precision"][name]
+                if precision < 0.95:
+                    failures.append({
+                        "label": name,
+                        "metric": f"{attribute}:{value}.precision",
+                        "observed": precision,
+                        "required": 0.95,
+                    })
     return failures
 
 
@@ -219,6 +273,7 @@ def main() -> int:
         semantic_head.predict_proba(np.stack([graph_summary(graph) for graph in validation])),
         dtype=torch.float,
     )
+    validation_names = name_probabilities(validation)
 
     device = torch.device("cpu")
     model = PrimitiveGraphSAGE(train[0].x.shape[1], classes=len(LABELS)).to(device)
@@ -269,13 +324,19 @@ def main() -> int:
         label: choose_threshold(validation_semantic, validation_labels, label)
         for label in PRIMITIVE_IDS
     }
+    name_thresholds = {
+        label: choose_threshold(validation_names, validation_labels, label)
+        for label in PRIMITIVE_IDS
+    }
     test_logits, test_labels = scores(model, test, device)
     test_semantic = torch.tensor(
         semantic_head.predict_proba(np.stack([graph_summary(graph) for graph in test])),
         dtype=torch.float,
     )
+    test_names = name_probabilities(test)
     test_predictions = combined_predictions(
-        (test_logits / temperature).softmax(dim=1), test_semantic, thresholds, semantic_thresholds
+        (test_logits / temperature).softmax(dim=1), test_semantic, thresholds, semantic_thresholds,
+        test_names, name_thresholds
     )
     result = metrics(test_labels, test_predictions)
     result["slices"] = {
@@ -292,21 +353,24 @@ def main() -> int:
             "primitive_precision": 0.95, "calibration_precision": CALIBRATION_PRECISION,
             "none_false_positive_rate": 0.01,
             "minimum_support": {LABELS[k]: v for k, v in MIN_SUPPORT.items()},
+            "slice_minimum_support": SLICE_MIN_SUPPORT,
         },
         "split": {
             "train": len(train), "validation": len(validation), "test": len(test),
             "validation_sources": sorted(VALIDATION_SOURCES), "held_out_sources": sorted(TEST_SOURCES),
         },
         "temperature": temperature,
-        "decision": f"GNN prediction with semantic-head agreement >= {SEMANTIC_VETO_THRESHOLD}; semantic-head fallback when independently precision-gated",
+        "decision": f"GNN prediction with semantic-head agreement >= {SEMANTIC_VETO_THRESHOLD}; semantic-head and symbol-name fallback when independently precision-gated",
         "validation_selection": best_selection,
         "thresholds": {LABELS[k]: v for k, v in thresholds.items()},
         "semantic_thresholds": {LABELS[k]: v for k, v in semantic_thresholds.items()},
+        "name_thresholds": {LABELS[k]: v for k, v in name_thresholds.items()},
     })
     all_class_passed = (
         all(result["support"][LABELS[k]] >= required for k, required in MIN_SUPPORT.items())
         and all(result["precision"][LABELS[k]] >= 0.95 for k in PRIMITIVE_IDS)
         and result["none_false_positive_rate"] <= 0.01
+        and not gate_failures(result)
     )
     result["all_class_gate_passed"] = all_class_passed
     result["gate_failures"] = gate_failures(result)
@@ -323,10 +387,14 @@ def main() -> int:
         f"Deployment gate: **{'PASS' if passed else 'FAIL'}**.\n\n"
         f"All-class gate: **{'PASS' if all_class_passed else 'FAIL'}**. "
         f"Deployable labels: {', '.join(result['deployable_labels']) or 'none'}.\n\n"
-        "The model recognizes AES, RSA, ECC, SHA, ML-KEM, ML-DSA, and SLH-DSA regions in cooperative x86_64 and AArch64 ELF binaries. "
+        "The model is trained and evaluated over AES, RSA, ECC, SHA, ML-KEM, ML-DSA, SLH-DSA, and none regions "
+        "in cooperative x86_64 and AArch64 ELF binaries. Runtime assertions are restricted to deployable labels only. "
         f"Evaluation holds out {', '.join(sorted(TEST_SOURCES))} by source project. Confidence is "
         f"temperature-scaled on held-out {', '.join(sorted(VALIDATION_SOURCES))} projects. It is not calibrated "
         "for distribution shift, obfuscation, or adversarial binaries.\n\n"
+        "Some deployable classes are gated by a conservative symbol-name head. Those runtime assertions require "
+        "matching symbol or fingerprint-equivalent name evidence; the model does not claim name-independent recovery "
+        "for every class in fully stripped binaries.\n\n"
         "Held-out primitive precision: "
         + ", ".join(f"{LABELS[label]}={result['precision'][LABELS[label]]:.3f}" for label in PRIMITIVE_IDS)
         + "; "
@@ -345,6 +413,7 @@ def main() -> int:
             "temperature": temperature,
             "thresholds": thresholds,
             "semantic_thresholds": semantic_thresholds,
+            "name_thresholds": name_thresholds,
             "deployable_label_ids": deployable_label_ids(result),
         }, deployable)
         joblib.dump(semantic_head, semantic_path)

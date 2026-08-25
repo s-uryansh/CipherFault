@@ -44,15 +44,34 @@ jobs:
       - run: pytest -q
         env:
           GHIDRA_INSTALL_DIR: ${{ runner.tool_cache }}/ghidra_12.1.2_PUBLIC
-      - run: python scripts/check_recognizer_artifacts.py
-      - run: python scripts/evaluate_manifest.py corpus/eval/manifest.local.json
+      - run: python scripts/check_recognizer_artifacts.py --require-all-class
+      - run: python scripts/evaluate_manifest.py corpus/eval/manifest.local.json --min-recall 1.0
         env:
           GHIDRA_INSTALL_DIR: ${{ runner.tool_cache }}/ghidra_12.1.2_PUBLIC
       - run: python scripts/evaluate_manifest.py corpus/eval/manifest.negative.json
         env:
           GHIDRA_INSTALL_DIR: ${{ runner.tool_cache }}/ghidra_12.1.2_PUBLIC
+      - run: bash scripts/build_external_fixtures.sh
+      - run: python scripts/evaluate_manifest.py corpus/eval/manifest.external.json --min-recall 1.0
+        env:
+          GHIDRA_INSTALL_DIR: ${{ runner.tool_cache }}/ghidra_12.1.2_PUBLIC
+      - run: bash scripts/build_real_fixtures.sh
+      - run: python scripts/evaluate_manifest.py corpus/eval/manifest.real.json
+        env:
+          GHIDRA_INSTALL_DIR: ${{ runner.tool_cache }}/ghidra_12.1.2_PUBLIC
+      - run: bash scripts/build_pqc_eval_fixtures.sh
+      - run: python scripts/evaluate_manifest.py corpus/eval/manifest.pqc.json --min-recall 1.0
+        env:
+          GHIDRA_INSTALL_DIR: ${{ runner.tool_cache }}/ghidra_12.1.2_PUBLIC
       - run: bash scripts/build_cve_fixtures.sh
-      - run: python scripts/evaluate_manifest.py corpus/eval/manifest.cve.json
+      - run: python scripts/evaluate_manifest.py corpus/eval/manifest.cve.json --min-recall 1.0
+        env:
+          GHIDRA_INSTALL_DIR: ${{ runner.tool_cache }}/ghidra_12.1.2_PUBLIC
+      - run: python scripts/check_known_limitations.py
+        env:
+          GHIDRA_INSTALL_DIR: ${{ runner.tool_cache }}/ghidra_12.1.2_PUBLIC
+      - run: bash scripts/build_demo.sh
+      - run: python scripts/evaluate_manifest.py corpus/eval/manifest.demo.json --min-recall 1.0
         env:
           GHIDRA_INSTALL_DIR: ${{ runner.tool_cache }}/ghidra_12.1.2_PUBLIC
       - run: python -m build --wheel --outdir "${{ runner.temp }}/wheels"
