@@ -41,6 +41,7 @@ These are the revisions used by the current corpus/evaluation baseline.
 | MITRE CWE-329 external reference | `https://cwe.mitre.org/data/definitions/329.html` |
 | Moonlight common C real-code fixture | `874ac9548f1bd6f095ef2b435c42cdde460e7821` |
 | liboqs examples fixture | `8979276ad1eb008215aa78a3c56b3649f604bbb1` |
+| BoringSSL ML-KEM API-style fixture | `f1f2556a5dfa59e147d9d47279cc3f7f8a18b433` |
 
 ## Rebuild Commands
 
@@ -62,6 +63,7 @@ bash scripts/verify.sh
 - All-class recognizer gate: pass.
 - Slice gate: pass for supported architecture/compiler/optimization slices with at least
   30 examples.
+- Public PQC evaluation manifest: 3 cases, 4 expected facts, recall 1.0.
 - Held-out primitive precision:
   - AES: 1.000
   - RSA: 1.000

@@ -94,19 +94,48 @@ fails, verify `GHIDRA_INSTALL_DIR`, Java, and the Ghidra installation.
 
 ## Usage
 
+Verify the installed command:
+
 ```bash
-# Text output
+cipherfault --version
+cipherfault --help
+cipherfault scan --help
+```
+
+Scan any supported ELF binary:
+
+```bash
 cipherfault scan ./path/to/binary
+```
 
-# Machine-readable evidence
-cipherfault scan ./path/to/binary --format json
+Default text output prints recognized primitives, low-confidence recognition
+candidates, Tier-1 `VERIFIED_FACT` entries, Tier-2 `INDICATOR` questions, and
+diagnostics. Use machine-readable output for automation:
 
-# CycloneDX 1.6 CBOM
-cipherfault scan ./path/to/binary --format cbom
+```bash
+cipherfault scan ./path/to/binary --format json > evidence.json
+cipherfault scan ./path/to/binary --format cbom > cbom.cdx.json
+```
 
-# Matching unstripped reference for a stripped/static target
+For stripped or statically linked targets where matching unstripped build output is
+available, pass it as a fingerprint reference:
+
+```bash
 cipherfault scan ./target-stripped --fingerprint-reference ./target-with-symbols
 ```
+
+To run against a known local fixture from this repository:
+
+```bash
+bash scripts/build_fixtures.sh
+cipherfault scan corpus/build/fixtures/aes_cbc_static_iv/target
+cipherfault scan corpus/build/fixtures/aes_cbc_static_iv/target --format json
+cipherfault scan corpus/build/fixtures/aes_cbc_static_iv/target --format cbom
+```
+
+The CLI exits `0` when analysis completes, even if it reports findings or diagnostics.
+It exits non-zero only when analysis cannot run, for example an unsupported input file,
+missing target, or Ghidra startup/lifting failure.
 
 Supported inputs are currently 64-bit little-endian Linux ELF binaries for x86_64 and
 AArch64. PE, Mach-O, ARM32, MIPS, adversarial obfuscation, packers, and malware are not
@@ -183,9 +212,9 @@ export CIPHERFAULT_RECOGNIZER_MODEL=/path/to/recognizer.pt
 ## Evaluation
 
 Current manifests contain nine local positive cases, six negative-control cases, one
-MITRE CWE-329 external-reference case, one public real-code negative case, two public
-liboqs PQC example cases, one independently sourced demo, and one genuine CVE gate for
-U-Boot CVE-2017-3225.
+MITRE CWE-329 external-reference case, one public real-code negative case, three public
+PQC API-style cases from liboqs/BoringSSL, one independently sourced demo, and one
+genuine CVE gate for U-Boot CVE-2017-3225.
 
 ```bash
 python scripts/evaluate_manifest.py corpus/eval/manifest.local.json

@@ -16,7 +16,7 @@ ELF pipeline, with claims backed by repeatable tests and external validation.
 | CVE coverage | Add more confirmed crypto-misuse CVE fixtures where source and build steps are public and reproducible. | CVE manifest includes multiple classical and PQC-relevant cases, all built and checked automatically. |
 | Static-anchor validation | Stress static/fingerprint anchors on stripped and statically linked binaries where PLT/symbol recovery is weak. | Manifest cases prove API/static anchors still populate Tier-1 facts without relying on easy symbols. |
 | Name-independent recognition | Reduce dependence on the symbol-name head for RSA, ECC, SHA, and SLH-DSA. | All-class recognizer gate still passes when symbol-name evidence is absent or ablated on a held-out split. |
-| PQC evaluation | Add public optimized PQC binaries for ML-KEM, ML-DSA, and SLH-DSA beyond the current liboqs/PQClean/corpus mix. | PQC manifest validates parameter extraction and randomness-origin facts on independent optimized implementations. |
+| PQC evaluation | Add public optimized PQC binaries for SLH-DSA and more implementation-level ML-KEM/ML-DSA beyond the current liboqs/BoringSSL/PQClean/corpus mix. | PQC manifest validates parameter extraction and randomness-origin facts on independent optimized implementations. |
 
 ## Useful External Inputs
 
@@ -42,6 +42,7 @@ manifest expectations before they count as completed evaluation coverage.
 |---|---|---|
 | liboqs `tests/example_kem.c` / `tests/example_sig.c` | Small public PQC examples with documented POSIX compile commands. | Added as focused ML-KEM/ML-DSA parameter evaluation in `manifest.pqc.json`. |
 | BoringSSL ML-KEM add commit `500fa1f9d274d06ddfc112e1815ad5dc5ce92234` | Public optimized ML-KEM implementation landing point. | Optimized PQC recognition and parameter extraction stress case. |
+| BoringSSL `BCM_mlkem1024_encap_external_entropy` | Public API shape for explicit ML-KEM encapsulation entropy. | Added as ML-KEM-1024 weak-randomness provenance evaluation in `manifest.pqc.json`. |
 | OpenSSL `apps/speed.c` | Real OpenSSL program with a global IV buffer passed into EVP cipher setup. | Real-binary static-IV/operand-origin positive or benchmark-only fixture. |
 | Moonlight `PlatformCrypto.c` | Small C crypto wrapper using OpenSSL AES-GCM and AES-CBC. | Added as a real-code dynamic-operand negative fixture in `manifest.real.json`. |
 | OpenSSL CVE-2023-5363 | Public OpenSSL CVE about IV length handling with referenced fix commits. | Future length/parameter rule candidate, not covered by current Tier-1 rules. |
@@ -58,8 +59,8 @@ manifest expectations before they count as completed evaluation coverage.
   `scripts/check_known_limitations.py`.
 - A MITRE CWE-329 external-reference fixture is compiled to stripped Linux ELF and
   checked with manifest recall 1.0.
-- Public Moonlight and liboqs example fixtures are fetched at pinned commits, built as
-  focused ELF objects, and checked in the release-style gate.
+- Public Moonlight, liboqs, and BoringSSL fixtures are fetched at pinned commits, built
+  as focused ELF objects, and checked in the release-style gate.
 - [REPRODUCIBILITY.md](REPRODUCIBILITY.md) records source revisions, toolchain checksums,
   rebuild commands, and expected outputs.
 
@@ -72,6 +73,8 @@ manifest expectations before they count as completed evaluation coverage.
   ML-DSA, and SLH-DSA.
 - Local positive, negative-control, external-reference, independent demo, and U-Boot
   CVE-2017-3225 manifests pass.
+- Public real-code and PQC manifests pass, including BoringSSL ML-KEM external-entropy
+  weak-randomness provenance.
 - Wheel install and offline SBOM/CBOM schema validation pass.
 
 ## Deferred Product Work

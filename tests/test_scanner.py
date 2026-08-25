@@ -83,6 +83,14 @@ def test_liboqs_signature_api_symbols_are_pqc_anchors():
     assert slhdsa["variant"] == "SLH-DSA-SHA2-128s"
 
 
+def test_boringssl_mlkem_external_entropy_has_randomness_operand():
+    spec = anchor_spec("BCM_mlkem1024_encap_external_entropy")
+
+    assert spec["primitive"] == "ML-KEM"
+    assert spec["variant"] == "ML-KEM-1024"
+    assert spec["operands"] == {"key": 3, "randomness": 4}
+
+
 def test_recognizer_artifact_check_requires_model_and_semantic_head(tmp_path):
     model = tmp_path / "recognizer.pt"
     semantic = tmp_path / "recognizer.semantic.joblib"

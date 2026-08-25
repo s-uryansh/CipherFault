@@ -107,7 +107,7 @@ def anchor_spec(callee: str | None) -> dict | None:
     match = re.search(r"(?:MLKEM|ML_KEM)[_-]?(512|768|1024).*(?:enc|encaps)", callee or "", re.IGNORECASE)
     if match:
         operands = {"key": 3}
-        if "derand" in (callee or "").lower():
+        if "derand" in (callee or "").lower() or "external_entropy" in (callee or "").lower():
             operands["randomness"] = 4
         return {
             "primitive": "ML-KEM",

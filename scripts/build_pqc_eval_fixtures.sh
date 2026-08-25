@@ -5,6 +5,9 @@ case_dir="corpus/eval/LIBOQS-EXAMPLES"
 source_dir="$case_dir/source"
 commit="8979276ad1eb008215aa78a3c56b3649f604bbb1"
 stub_dir="${TMPDIR:-/tmp}/cipherfault-liboqs-stubs"
+bssl_dir="corpus/eval/BORINGSSL-MLKEM"
+bssl_source_dir="$bssl_dir/source"
+bssl_commit="f1f2556a5dfa59e147d9d47279cc3f7f8a18b433"
 
 mkdir -p "$case_dir" "$stub_dir/oqs"
 if [ ! -d "$source_dir/.git" ]; then
@@ -85,3 +88,49 @@ cc -O2 -g -I"$stub_dir" -c "$source_dir/tests/example_sig.c" \
     -o "$case_dir/target_example_sig_reference.o"
 cp "$case_dir/target_example_sig_reference.o" "$case_dir/target_example_sig_strip.o"
 strip --strip-debug "$case_dir/target_example_sig_strip.o"
+
+mkdir -p "$bssl_dir"
+if [ ! -d "$bssl_source_dir/.git" ]; then
+    git clone --filter=blob:none https://boringssl.googlesource.com/boringssl "$bssl_source_dir"
+fi
+if ! git -C "$bssl_source_dir" cat-file -e "$bssl_commit^{commit}" 2>/dev/null; then
+    git -C "$bssl_source_dir" fetch --depth 1 origin "$bssl_commit"
+fi
+git -C "$bssl_source_dir" checkout --detach "$bssl_commit"
+
+cat > "$bssl_dir/boringssl_mlkem_external_entropy.c" <<'EOF'
+#include <stdint.h>
+#include <stdlib.h>
+
+#define MLKEM1024_CIPHERTEXT_BYTES 1568
+#define MLKEM_SHARED_SECRET_BYTES 32
+#define BCM_MLKEM_ENCAP_ENTROPY 32
+
+struct MLKEM1024_public_key {
+    uint8_t opaque[1632];
+};
+
+extern int BCM_mlkem1024_encap_external_entropy(
+    uint8_t out_ciphertext[MLKEM1024_CIPHERTEXT_BYTES],
+    uint8_t out_shared_secret[MLKEM_SHARED_SECRET_BYTES],
+    const struct MLKEM1024_public_key *public_key,
+    const uint8_t entropy[BCM_MLKEM_ENCAP_ENTROPY]);
+
+int main(void) {
+    uint8_t ciphertext[MLKEM1024_CIPHERTEXT_BYTES] = {0};
+    uint8_t shared_secret[MLKEM_SHARED_SECRET_BYTES] = {0};
+    struct MLKEM1024_public_key public_key = {{0}};
+    uint8_t entropy[BCM_MLKEM_ENCAP_ENTROPY];
+    for (int i = 0; i < BCM_MLKEM_ENCAP_ENTROPY; ++i) {
+        entropy[i] = (uint8_t)rand();
+    }
+    return BCM_mlkem1024_encap_external_entropy(
+        ciphertext, shared_secret, &public_key, entropy
+    );
+}
+EOF
+
+cc -O2 -g -c "$bssl_dir/boringssl_mlkem_external_entropy.c" \
+    -o "$bssl_dir/target_mlkem_extentropy_reference.o"
+cp "$bssl_dir/target_mlkem_extentropy_reference.o" "$bssl_dir/target_mlkem_extentropy_strip.o"
+strip --strip-debug "$bssl_dir/target_mlkem_extentropy_strip.o"

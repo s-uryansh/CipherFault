@@ -26,6 +26,7 @@ dist/
 *.log
 *.tmp
 run.log
+handoff.md
 # CipherFault generated/downloaded data
 corpus/build/
 corpus/external/
@@ -35,6 +36,7 @@ corpus/eval/**/target_*
 reports/
 !corpus/eval/CWE-329-MITRE/source/
 !corpus/eval/CWE-329-MITRE/source/cwe329_static_iv.c
+corpus/eval/BORINGSSL-MLKEM/boringssl_mlkem_external_entropy.c
 # Keep model documentation and metrics, not binary checkpoints
 models/*.pt
 models/*.joblib

@@ -26,10 +26,12 @@ def _files(directory: str, pattern: str = "*.c") -> list[str]:
     return [str(path.relative_to(ROOT)) for path in sorted((ROOT / directory).glob(pattern))]
 
 
-def _openssl_include(arch: str) -> str:
+def _openssl_include(arch: str, *, prepare: bool = False) -> str:
     generated = BUILD / "generated" / "openssl" / arch
     marker = generated / ".complete"
     generated.mkdir(parents=True, exist_ok=True)
+    if not prepare:
+        return str(generated.relative_to(ROOT))
     with (generated / ".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         if not marker.exists():
@@ -49,12 +51,13 @@ def _openssl_include(arch: str) -> str:
     return str(generated.relative_to(ROOT))
 
 
-def jobs(arch: str) -> list[dict]:
+def jobs(arch: str, *, prepare: bool = False) -> list[dict]:
     libpng_config = BUILD / "generated" / "libpng" / "pnglibconf.h"
     libpng_config.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(EXTERNAL / "libpng" / "pnglibconf.h.prebuilt", libpng_config)
+    if prepare:
+        shutil.copyfile(EXTERNAL / "libpng" / "pnglibconf.h.prebuilt", libpng_config)
     sqlite_header = EXTERNAL / "sqlite" / "sqlite3.h"
-    if not sqlite_header.exists():
+    if prepare and not sqlite_header.exists():
         subprocess.check_call(["./configure", "--disable-shared", "--disable-static"], cwd=EXTERNAL / "sqlite")
         subprocess.check_call(["make", "sqlite3.h"], cwd=EXTERNAL / "sqlite")
 
@@ -68,7 +71,7 @@ def jobs(arch: str) -> list[dict]:
     mldsa_root = f"corpus/external/liboqs/src/sig/ml_dsa/mldsa-native_ml-dsa-65_{oqs_variant}"
     mldsa_dir = f"{mldsa_root}/mldsa/src"
     mldsa_config = f"{mldsa_root}/integration/liboqs/config_{oqs_variant}.h"
-    openssl_include = _openssl_include(arch)
+    openssl_include = _openssl_include(arch, prepare=prepare)
     common = [
         {
             "source": "openssl", "path": "corpus/external/openssl/crypto/aes/aes_core.c",
@@ -365,7 +368,7 @@ def main() -> int:
     compilers = [(args.compiler_id, args.cc, args.cxx, driver_flags)] if args.compiler_id else DEFAULT_COMPILERS
     rows = [
         build(job, compiler, opt, args.arch)
-        for job in jobs(args.arch)
+        for job in jobs(args.arch, prepare=True)
         for compiler in compilers
         for opt in optimization_levels(compiler[0])
     ]

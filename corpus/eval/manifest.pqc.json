@@ -26,5 +26,24 @@
       }
     ],
     "notes": "Focused object build of upstream tests/example_sig.c using a minimal compatibility header; validates liboqs ML-DSA API-symbol recognition."
+  },
+  {
+    "id": "BORINGSSL-MLKEM1024-EXTERNAL-ENTROPY-WEAK-RNG",
+    "source_url": "https://boringssl.googlesource.com/boringssl",
+    "source_commit": "f1f2556a5dfa59e147d9d47279cc3f7f8a18b433",
+    "binary": "corpus/eval/BORINGSSL-MLKEM/target_mlkem_extentropy_strip.o",
+    "expected_facts": [
+      {
+        "fact_type": "parameter_set",
+        "cwe": "None",
+        "origin": "ML-KEM-1024"
+      },
+      {
+        "fact_type": "weak_randomness",
+        "cwe": "CWE-338",
+        "origin": "rand"
+      }
+    ],
+    "notes": "Focused BoringSSL API-style object for BCM_mlkem1024_encap_external_entropy; validates explicit encapsulation-entropy provenance without a heavyweight full-library Ghidra scan."
   }
 ]
