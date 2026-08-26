@@ -26,6 +26,7 @@ dist/
 *.log
 *.tmp
 run.log
+log.run
 handoff.md
 # CipherFault generated/downloaded data
 corpus/build/

@@ -49,11 +49,15 @@ These are the revisions used by the current corpus/evaluation baseline.
 bash scripts/fetch_corpus.sh
 bash scripts/fetch_toolchains.sh
 python scripts/build_matrix.py
-python scripts/merge_matrix_metadata.py corpus/build/matrix/shards/*.jsonl --output corpus/build/matrix/metadata.jsonl
 python scripts/build_recognizer_dataset.py
 python scripts/train_recognizer.py
 bash scripts/verify.sh
 ```
+
+`python scripts/build_matrix.py` already writes
+`corpus/build/matrix/metadata.jsonl`. Run `merge_matrix_metadata.py` only for a
+deliberate sharded matrix rebuild where every shard was regenerated from the same
+source list.
 
 ## Current Expected Outputs
 

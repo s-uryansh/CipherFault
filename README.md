@@ -183,11 +183,15 @@ architecture metadata.
 bash scripts/fetch_corpus.sh
 bash scripts/fetch_toolchains.sh
 python scripts/build_matrix.py
-python scripts/merge_matrix_metadata.py corpus/build/matrix/shards/*.jsonl --output corpus/build/matrix/metadata.jsonl
 python scripts/build_recognizer_dataset.py
 python scripts/train_recognizer.py
 python scripts/check_recognizer_artifacts.py --require-artifacts --require-all-class
 ```
+
+`build_matrix.py` writes `corpus/build/matrix/metadata.jsonl` directly for a local
+one-shot build. Use `merge_matrix_metadata.py` only when you intentionally built
+separate shard files under `corpus/build/matrix/shards/`; stale shards from an older
+matrix can fail validation with a source-count mismatch.
 
 See [REPRODUCIBILITY.md](REPRODUCIBILITY.md) for pinned source revisions, toolchain
 checksums, and expected gate outputs for the current baseline.
