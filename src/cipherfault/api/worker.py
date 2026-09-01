@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .db.models import Scan, UsageEvent
 from .db.session import SessionLocal
+from .storage import scan_input
 from cipherfault.cbom import report_to_cbom
 from cipherfault.service import run_scan_report
 
@@ -18,7 +19,8 @@ def execute_scan_job(scan_id: str) -> None:
         scan.stage = "scanning"
         session.commit()
 
-        report = run_scan_report(scan.storage_path)
+        with scan_input(scan.storage_path) as binary_path:
+            report = run_scan_report(binary_path)
         scan.report_json = report.to_dict()
         scan.cbom_json = report_to_cbom(report)
         scan.status = "complete"

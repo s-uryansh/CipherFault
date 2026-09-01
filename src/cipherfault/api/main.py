@@ -8,15 +8,15 @@ from typing import Any
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from rq import Retry
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from .auth import current_org, hash_api_key
 from .config import settings
-from .db.models import ApiKey, Org, Scan
+from .db.models import ApiKey, Org, Scan, UsageEvent
 from .db.session import SessionLocal, get_db, init_db
 from .queue import scan_queue
-from .storage import save_upload
+from .storage import delete_upload, save_upload
 from .worker import execute_scan_job
 
 
@@ -117,6 +117,20 @@ def get_cbom(
     return scan.cbom_json
 
 
+@app.delete("/v1/scans/{scan_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_scan(
+    scan_id: str,
+    org: Org = Depends(current_org),
+    db: Session = Depends(get_db),
+) -> None:
+    scan = _scan_for_org(db, scan_id, org.id)
+    delete_upload(scan.storage_path)
+    for event in db.scalars(select(UsageEvent).where(UsageEvent.scan_id == scan.id)):
+        db.delete(event)
+    db.delete(scan)
+    db.commit()
+
+
 @app.get("/v1/orgs/{org_id}/scans")
 def list_scans(
     org_id: str,
@@ -138,6 +152,18 @@ def list_scans(
         }
         for scan in scans
     ]
+
+
+@app.get("/v1/orgs/{org_id}/usage")
+def get_usage(
+    org_id: str,
+    org: Org = Depends(current_org),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    if org_id != org.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "wrong org")
+    completed = db.scalar(select(func.count()).select_from(Scan).where(Scan.org_id == org.id, Scan.status == "complete"))
+    return {"org_id": org.id, "tier": org.tier, "scans_completed": completed or 0}
 
 
 def _scan_for_org(db: Session, scan_id: str, org_id: str) -> Scan:

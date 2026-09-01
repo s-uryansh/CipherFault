@@ -14,7 +14,7 @@ from fastapi import HTTPException, UploadFile
 from cipherfault.api.auth import hash_api_key
 from cipherfault.api.db.models import ApiKey, Org
 from cipherfault.api.db.session import SessionLocal, init_db
-from cipherfault.api.main import get_cbom, get_findings, get_scan, healthz, upload_scan
+from cipherfault.api.main import delete_scan, get_cbom, get_findings, get_scan, get_usage, healthz, upload_scan
 from cipherfault.report import AnalysisReport
 
 
@@ -62,6 +62,12 @@ def test_upload_scan_completes_inline(monkeypatch, tmp_path):
     assert findings["verified_facts"] == [{"id": "fact-1"}]
     cbom = get_cbom(scan_id, org=org, db=db)
     assert cbom == {"bomFormat": "CycloneDX"}
+    usage = get_usage(ORG_ID, org=org, db=db)
+    assert usage["scans_completed"] >= 1
+    delete_scan(scan_id, org=org, db=db)
+    with pytest.raises(HTTPException) as exc:
+        get_scan(scan_id, org=org, db=db)
+    assert exc.value.status_code == 404
     db.close()
 
 

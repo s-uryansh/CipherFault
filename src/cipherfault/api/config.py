@@ -11,7 +11,11 @@ from pathlib import Path
 class Settings:
     database_url: str = os.getenv("CIPHERFAULT_DATABASE_URL", "sqlite:///./cipherfault-api.db")
     redis_url: str = os.getenv("CIPHERFAULT_REDIS_URL", "redis://localhost:6379/0")
+    storage_backend: str = os.getenv("CIPHERFAULT_STORAGE_BACKEND", "local")
     storage_dir: Path = Path(os.getenv("CIPHERFAULT_STORAGE_DIR", "./.cipherfault_uploads"))
+    supabase_url: str | None = os.getenv("CIPHERFAULT_SUPABASE_URL")
+    supabase_key: str | None = os.getenv("CIPHERFAULT_SUPABASE_KEY")
+    supabase_bucket: str | None = os.getenv("CIPHERFAULT_SUPABASE_BUCKET")
     run_jobs_inline: bool = os.getenv("CIPHERFAULT_RUN_JOBS_INLINE", "0") == "1"
     dev_api_key: str | None = os.getenv("CIPHERFAULT_DEV_API_KEY")
 
