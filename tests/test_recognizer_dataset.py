@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 
 import networkx as nx
 import pytest
@@ -33,6 +34,16 @@ from cipherfault.recognizer.dwarf import (
 from cipherfault.recognizer.featurize import SEMANTIC_BINS, VOCAB, block_features, region_to_data
 from cipherfault.recognizer.model import PrimitiveGraphSAGE
 from cipherfault.regions.extractor import extract_regions
+
+
+ROOT = Path(__file__).resolve().parents[1]
+FULL_MATRIX_CORPUS_MARKERS = (
+    ROOT / "corpus/external/openssl/crypto/aes/aes_core.c",
+    ROOT / "corpus/external/boringssl/crypto/fipsmodule/aes/aes_nohw.cc.inc",
+    ROOT / "corpus/external/bearssl/src/symcipher",
+    ROOT / "corpus/external/PQClean/crypto_sign/sphincs-sha2-128s-simple/clean",
+    ROOT / "corpus/external/liboqs/src/sig/slh_dsa/slh_dsa_c/slh_dsa.c",
+)
 
 
 def test_function_label_applies_explicit_symbol_exclusions():
@@ -119,6 +130,9 @@ def test_compiler_matrix_uses_only_supported_optimization_levels():
 
 
 def test_every_primitive_has_disjoint_train_validation_and_test_sources():
+    if not all(path.exists() for path in FULL_MATRIX_CORPUS_MARKERS):
+        pytest.skip("full recognizer source corpus is not checked out")
+
     sources = {
         label: {job["source"] for job in jobs("x86_64") if job["labels"] == [label]}
         for label in LABELS.values()
