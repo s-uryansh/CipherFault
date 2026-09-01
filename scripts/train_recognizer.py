@@ -97,15 +97,23 @@ def combined_predictions(
     return predicted
 
 
-def scores(model, dataset, device):
+def scores(model, dataset, device, batch_size=64):
     logits, labels = [], []
     model.eval()
     with torch.no_grad():
-        for batch in DataLoader(dataset, batch_size=64):
+        for batch in DataLoader(dataset, batch_size=batch_size):
             batch = batch.to(device)
             logits.append(model(batch.x, batch.edge_index, batch.edge_type, batch.batch).cpu())
             labels.append(batch.y.cpu())
     return torch.cat(logits), torch.cat(labels)
+
+
+def training_device(requested: str) -> torch.device:
+    if requested == "auto":
+        requested = "cuda" if torch.cuda.is_available() else "cpu"
+    if requested == "cuda" and not torch.cuda.is_available():
+        raise SystemExit("CUDA requested but torch.cuda.is_available() is false")
+    return torch.device(requested)
 
 
 def calibrate_temperature(logits, labels) -> float:
@@ -252,9 +260,14 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", default="corpus/build/recognizer_dataset.pt")
     parser.add_argument("--name", default="recognizer")
+    parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
+    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--eval-batch-size", type=int, default=64)
     args = parser.parse_args()
     random.seed(SEED)
     torch.manual_seed(SEED)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(SEED)
     torch.use_deterministic_algorithms(True)
     dataset = torch.load(ROOT / args.dataset, weights_only=False)
     train = [graph for graph in dataset if graph.source not in VALIDATION_SOURCES | TEST_SOURCES]
@@ -275,7 +288,8 @@ def main() -> int:
     )
     validation_names = name_probabilities(validation)
 
-    device = torch.device("cpu")
+    device = training_device(args.device)
+    print(f"training_device={device} batch_size={args.batch_size}", flush=True)
     model = PrimitiveGraphSAGE(train[0].x.shape[1], classes=len(LABELS)).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.003, weight_decay=1e-4)
     sampler = WeightedRandomSampler(
@@ -284,7 +298,7 @@ def main() -> int:
     )
     loader = DataLoader(
         train,
-        batch_size=32,
+        batch_size=args.batch_size,
         sampler=sampler,
     )
     best_state = None
@@ -300,7 +314,7 @@ def main() -> int:
             )
             loss.backward()
             optimizer.step()
-        validation_logits, validation_labels = scores(model, validation, device)
+        validation_logits, validation_labels = scores(model, validation, device, args.eval_batch_size)
         validation_loss = float(F.cross_entropy(validation_logits, validation_labels))
         selection = (*operating_score(validation_logits, validation_labels, validation_semantic), -validation_loss)
         if selection > best_selection:
@@ -313,7 +327,7 @@ def main() -> int:
             )
 
     model.load_state_dict(best_state)
-    validation_logits, validation_labels = scores(model, validation, device)
+    validation_logits, validation_labels = scores(model, validation, device, args.eval_batch_size)
     temperature = calibrate_temperature(validation_logits, validation_labels)
     validation_probabilities = (validation_logits / temperature).softmax(dim=1)
     thresholds = {
@@ -328,7 +342,7 @@ def main() -> int:
         label: choose_threshold(validation_names, validation_labels, label)
         for label in PRIMITIVE_IDS
     }
-    test_logits, test_labels = scores(model, test, device)
+    test_logits, test_labels = scores(model, test, device, args.eval_batch_size)
     test_semantic = torch.tensor(
         semantic_head.predict_proba(np.stack([graph_summary(graph) for graph in test])),
         dtype=torch.float,
@@ -362,6 +376,8 @@ def main() -> int:
         "temperature": temperature,
         "decision": f"GNN prediction with semantic-head agreement >= {SEMANTIC_VETO_THRESHOLD}; semantic-head and symbol-name fallback when independently precision-gated",
         "validation_selection": best_selection,
+        "training_device": str(device),
+        "batch_size": args.batch_size,
         "thresholds": {LABELS[k]: v for k, v in thresholds.items()},
         "semantic_thresholds": {LABELS[k]: v for k, v in semantic_thresholds.items()},
         "name_thresholds": {LABELS[k]: v for k, v in name_thresholds.items()},

@@ -22,7 +22,6 @@ dist/
 *.dll
 *.exe
 *.out
-*.pt
 *.log
 *.tmp
 run.log
@@ -38,10 +37,6 @@ reports/
 !corpus/eval/CWE-329-MITRE/source/
 !corpus/eval/CWE-329-MITRE/source/cwe329_static_iv.c
 corpus/eval/BORINGSSL-MLKEM/boringssl_mlkem_external_entropy.c
-# Keep model documentation and metrics, not binary checkpoints
-models/*.pt
-models/*.joblib
-
 # Ghidra projects
 *_ghidra/
 *.gpr

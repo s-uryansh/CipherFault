@@ -11,6 +11,4 @@ __pycache__
 corpus
 corpus/build
 corpus/external
-models
 reports
-*.pt

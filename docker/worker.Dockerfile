@@ -3,8 +3,8 @@ FROM python:3.13-slim
 ARG GHIDRA_VERSION=12.1.2
 ARG GHIDRA_BUILD=20260605
 ARG GHIDRA_SHA256=b62e81a0390618466c019c60d8c2f796ced2509c4c1aea4a37644a77272cf99d
-ARG CIPHERFAULT_INSTALL_TARGET=.[recognizer]
 ARG PYTORCH_CPU_INDEX_URL=https://download.pytorch.org/whl/cpu
+
 ENV GHIDRA_INSTALL_DIR=/opt/ghidra \
     CIPHERFAULT_RECOGNIZER_MODEL=/app/models/recognizer.pt \
     PYTHONUNBUFFERED=1
@@ -19,9 +19,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY . .
+COPY pyproject.toml README.md LICENSE ./
+COPY src/ src/
+COPY models/ models/
+COPY scripts/check_deploy_runtime.py scripts/check_deploy_runtime.py
 RUN pip install --no-cache-dir --index-url "$PYTORCH_CPU_INDEX_URL" torch \
-    && pip install --no-cache-dir "$CIPHERFAULT_INSTALL_TARGET"
+    && pip install --no-cache-dir ".[api,recognizer]"
 
-ENTRYPOINT ["cipherfault"]
-CMD ["--help"]
+CMD ["rq", "worker", "scans", "--url", "redis://redis:6379/0"]
