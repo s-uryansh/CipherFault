@@ -1,6 +1,8 @@
 import os
 import sys
+import asyncio
 from io import BytesIO
+from types import SimpleNamespace
 
 os.environ["CIPHERFAULT_DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["CIPHERFAULT_RUN_JOBS_INLINE"] = "1"
@@ -25,11 +27,13 @@ from cipherfault.api.main import (
     get_scan,
     get_usage,
     healthz,
+    readyz,
     list_api_keys,
     revoke_api_key,
     upload_scan,
 )
 from cipherfault.report import AnalysisReport
+from cipherfault.api import middleware
 
 
 API_KEY = "test-key"
@@ -53,6 +57,14 @@ def setup_module():
 
 def test_healthz_does_not_require_auth():
     assert healthz() == {"status": "ok"}
+
+
+def test_readyz_reports_database_failure(monkeypatch):
+    monkeypatch.setattr("cipherfault.api.main.check_db", lambda: (_ for _ in ()).throw(RuntimeError("db down")))
+    with pytest.raises(HTTPException) as exc:
+        readyz()
+    assert exc.value.status_code == 503
+    assert "database unavailable" in exc.value.detail
 
 
 def test_upload_scan_completes_inline(monkeypatch, tmp_path):
@@ -118,3 +130,34 @@ def test_api_key_create_list_and_revoke():
     keys = list_api_keys(ORG_ID, org=org, db=db)
     assert any(key["id"] == created["id"] and key["revoked_at"] is not None for key in keys)
     db.close()
+
+
+def test_rate_limit_middleware_blocks_after_limit(monkeypatch):
+    class FakeRedis:
+        def __init__(self):
+            self.count = 0
+
+        def incr(self, key):
+            self.count += 1
+            return self.count
+
+        def expire(self, key, seconds):
+            return True
+
+    fake = FakeRedis()
+    monkeypatch.setattr(middleware, "settings", SimpleNamespace(redis_url="redis://test", rate_limit_requests=1, rate_limit_window_seconds=60))
+    monkeypatch.setattr(middleware.Redis, "from_url", lambda url: fake)
+    request = SimpleNamespace(
+        url=SimpleNamespace(path="/v1/scans/upload"),
+        headers={"X-API-Key": "test-key"},
+        client=SimpleNamespace(host="127.0.0.1"),
+    )
+
+    async def ok_response(request):
+        return SimpleNamespace(status_code=200, headers={})
+
+    first = asyncio.run(middleware.rate_limit_middleware(request, ok_response))
+    second = asyncio.run(middleware.rate_limit_middleware(request, ok_response))
+
+    assert first.status_code == 200
+    assert second.status_code == 429

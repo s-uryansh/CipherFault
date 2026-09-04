@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from .db.models import Scan, UsageEvent
 from .db.session import SessionLocal
 from .config import settings
@@ -9,6 +11,9 @@ from .runtime import inference_metadata, require_inference_ready
 from .storage import scan_input
 from cipherfault.cbom import report_to_cbom
 from cipherfault.service import run_scan_report
+
+
+log = logging.getLogger("cipherfault.worker")
 
 
 def execute_scan_job(scan_id: str) -> None:
@@ -33,6 +38,7 @@ def execute_scan_job(scan_id: str) -> None:
         session.add(UsageEvent(org_id=scan.org_id, scan_id=scan.id))
         session.commit()
     except Exception as exc:
+        log.exception("scan job failed", extra={"scan_id": scan_id})
         if "scan" in locals() and scan is not None:
             scan.status = "failed"
             scan.stage = None

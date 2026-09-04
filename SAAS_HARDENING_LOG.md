@@ -28,6 +28,16 @@ Date: 2026-09-04
 22. Built `cipherfault-api:saas-hardening`; API-only image installed without recognizer dependencies.
 23. Ran API image import smoke test: `healthz()` returned `{"status": "ok"}`.
 24. Added `cipherfault saas-init` to create first-run SaaS database structure and seed `CIPHERFAULT_DEV_API_KEY` when set.
+25. Added Redis-backed common API rate limiting middleware.
+26. Added structured request/error logging and explicit DB/Redis/model readiness failures.
+27. Updated Docker commands to respect Render `PORT` and `CIPHERFAULT_REDIS_URL`.
+28. Added `API_REFERENCE.md` and `render.yaml` for Render Docker deployment.
+29. Added GitHub Actions keepalive workflow using `RENDER_API_URL`.
+30. Added CI deploy job that triggers Render API and worker deploy hooks after deployability checks pass on `main`.
+31. Added startup env set/unset logging without secret values.
+32. Added background keepalive for database, Redis, and Supabase every `CIPHERFAULT_KEEPALIVE_INTERVAL_SECONDS`.
+33. Added `/health/dependencies` to run the dependency keepalive on demand.
+34. Made GitHub Render deploy/keepalive workflows skip cleanly until their secrets are configured.
 
 ## Pre-Existing Dirty Files
 

@@ -5,12 +5,14 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import Any
 
+import asyncio
 from datetime import datetime, timezone
+import logging
 from secrets import token_urlsafe
 
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from redis import Redis
 from rq import Retry
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
@@ -19,11 +21,17 @@ from .auth import current_org, hash_api_key
 from .bootstrap import _seed_dev_api_key
 from .config import settings
 from .db.models import ApiKey, Org, Scan, UsageEvent
-from .db.session import get_db, init_db
-from .queue import scan_queue
+from .db.session import check_db, get_db, init_db
+from .env_audit import log_env_status
+from .keepalive import run_keepalive_once, keepalive_loop
+from .middleware import rate_limit_middleware, request_context_middleware
+from .queue import check_redis, scan_queue
 from .runtime import require_inference_ready
 from .storage import delete_upload, save_upload, storage_path_belongs_to_org
 from .worker import execute_scan_job
+
+
+logging.basicConfig(level=logging.INFO)
 
 
 class ScanCreate(BaseModel):
@@ -38,13 +46,27 @@ class ApiKeyCreate(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    log_env_status()
     init_db()
     if settings.dev_api_key:
         _seed_dev_api_key(settings.dev_api_key)
-    yield
+    task = asyncio.create_task(keepalive_loop()) if settings.keepalive_enabled else None
+    try:
+        yield
+    finally:
+        if task:
+            task.cancel()
 
 
 app = FastAPI(title="CipherFault API", version="0.1.0", lifespan=lifespan)
+app.middleware("http")(request_context_middleware)
+app.middleware("http")(rate_limit_middleware)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logging.getLogger("cipherfault.api").exception("unhandled API error")
+    return JSONResponse({"detail": "internal server error", "error": str(exc)}, status_code=500)
 
 
 @app.get("/healthz")
@@ -54,12 +76,26 @@ def healthz() -> dict[str, str]:
 
 @app.get("/readyz")
 def readyz(db: Session = Depends(get_db)) -> dict[str, str]:
-    db.execute(select(1))
-    if not settings.run_jobs_inline:
-        Redis.from_url(settings.redis_url).ping()
-    if settings.require_recognizer:
-        require_inference_ready()
+    try:
+        check_db()
+    except Exception as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"database unavailable: {exc}") from exc
+    try:
+        if not settings.run_jobs_inline:
+            check_redis()
+    except Exception as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"redis unavailable: {exc}") from exc
+    try:
+        if settings.require_recognizer:
+            require_inference_ready()
+    except Exception as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"inference unavailable: {exc}") from exc
     return {"status": "ready"}
+
+
+@app.get("/health/dependencies")
+def dependency_health() -> dict[str, str]:
+    return run_keepalive_once()
 
 
 @app.post("/v1/scans/upload", status_code=status.HTTP_202_ACCEPTED)
@@ -79,7 +115,7 @@ def upload_scan(
     db.refresh(scan)
     db.add(UsageEvent(org_id=org.id, scan_id=scan.id, event_type="scan_created"))
     db.commit()
-    job_id = _enqueue(scan.id)
+    job_id = _enqueue(scan, db)
     return {"scan_id": scan.id, "job_id": job_id, "status": scan.status}
 
 
@@ -103,7 +139,7 @@ def create_scan(
     db.refresh(scan)
     db.add(UsageEvent(org_id=org.id, scan_id=scan.id, event_type="scan_created"))
     db.commit()
-    job_id = _enqueue(scan.id)
+    job_id = _enqueue(scan, db)
     return {"scan_id": scan.id, "job_id": job_id, "status": scan.status}
 
 
@@ -272,16 +308,23 @@ def _scan_for_org(db: Session, scan_id: str, org_id: str) -> Scan:
     return scan
 
 
-def _enqueue(scan_id: str) -> str:
+def _enqueue(scan: Scan, db: Session) -> str:
     if settings.run_jobs_inline:
-        execute_scan_job(scan_id)
-        return scan_id
-    job = scan_queue().enqueue(
-        execute_scan_job,
-        scan_id,
-        retry=Retry(max=2, interval=[30, 120]),
-        job_timeout=900,
-    )
+        execute_scan_job(scan.id)
+        return scan.id
+    try:
+        job = scan_queue().enqueue(
+            execute_scan_job,
+            scan.id,
+            retry=Retry(max=2, interval=[30, 120]),
+            job_timeout=900,
+        )
+    except Exception as exc:
+        scan.status = "failed"
+        scan.stage = None
+        scan.error = f"queue unavailable: {exc}"
+        db.commit()
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"queue unavailable: {exc}") from exc
     return job.id
 
 
@@ -305,4 +348,3 @@ def _monthly_usage(org: Org, db: Session) -> int:
             UsageEvent.created_at >= start,
         )
     ) or 0
-

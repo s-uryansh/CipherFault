@@ -1,0 +1,33 @@
+name: Keep Render API Alive
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: render-keepalive
+  cancel-in-progress: false
+
+jobs:
+  healthcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Hit health endpoint
+        env:
+          API_URL: ${{ secrets.RENDER_API_URL }}
+        run: |
+          if [ -z "$API_URL" ]; then
+            echo "RENDER_API_URL is not set; skipping keepalive."
+            exit 0
+          fi
+          for attempt in 1 2 3 4; do
+            if curl -fsS "$API_URL/healthz"; then
+              exit 0
+            fi
+            if [ "$attempt" = "4" ]; then
+              exit 1
+            fi
+            sleep 900
+          done

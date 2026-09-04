@@ -18,3 +18,8 @@ CREATE INDEX IF NOT EXISTS ix_usage_events_org_type_created
 
 CREATE INDEX IF NOT EXISTS ix_scans_org_created
     ON scans (org_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS service_keepalives (
+    id varchar(36) PRIMARY KEY,
+    created_at timestamptz DEFAULT now()
+);

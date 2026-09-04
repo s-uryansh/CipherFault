@@ -27,4 +27,4 @@ RUN pip install --no-cache-dir --index-url "$PYTORCH_CPU_INDEX_URL" torch \
     && pip install --no-cache-dir ".[api,recognizer]" \
     && python scripts/check_deploy_runtime.py
 
-CMD ["rq", "worker", "scans", "--url", "redis://redis:6379/0"]
+CMD ["sh", "-c", "rq worker scans --url ${CIPHERFAULT_REDIS_URL:-redis://redis:6379/0}"]

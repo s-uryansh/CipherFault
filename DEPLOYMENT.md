@@ -47,6 +47,10 @@ CIPHERFAULT_SUPABASE_BUCKET=...
 CIPHERFAULT_REQUIRE_RECOGNIZER=1
 CIPHERFAULT_MAX_UPLOAD_BYTES=104857600
 CIPHERFAULT_FREE_TIER_MONTHLY_SCANS=25
+CIPHERFAULT_RATE_LIMIT_REQUESTS=60
+CIPHERFAULT_RATE_LIMIT_WINDOW_SECONDS=60
+CIPHERFAULT_KEEPALIVE_ENABLED=1
+CIPHERFAULT_KEEPALIVE_INTERVAL_SECONDS=120
 ```
 
 Keep `CIPHERFAULT_RUN_JOBS_INLINE=0` in production. API containers should enqueue
@@ -95,3 +99,43 @@ curl -f "$API_URL/readyz"
 `/healthz` only confirms the API process is alive. `/readyz` checks database,
 Redis when jobs are queued, and recognizer artifacts when
 `CIPHERFAULT_REQUIRE_RECOGNIZER=1`.
+
+## Render Docker Deployment
+
+Use two Render services:
+
+- `cipherfault-api`: web service from `docker/api.Dockerfile`.
+- `cipherfault-worker`: background worker from `docker/worker.Dockerfile`.
+
+The API image intentionally does not include the model/Ghidra stack. Set
+`CIPHERFAULT_REQUIRE_RECOGNIZER=0` on the API service and `1` on the worker.
+The worker performs the AI scan and writes results back to Postgres.
+
+Render health check path:
+
+```text
+/readyz
+```
+
+For GitHub keepalive, add this GitHub Actions secret after Render gives you a
+public URL:
+
+```text
+RENDER_API_URL=https://your-render-service.onrender.com
+```
+
+`.github/workflows/keepalive.yml` hits `/healthz` every 5 minutes. On failure it
+tries 3 more times at 15-minute intervals.
+
+For GitHub-triggered Render deploys, add deploy hook secrets from each Render
+service:
+
+```text
+RENDER_API_DEPLOY_HOOK_URL=...
+RENDER_WORKER_DEPLOY_HOOK_URL=...
+```
+
+On pushes to `main`, CI builds/tests deployable backend images first, then calls both
+Render deploy hooks.
+
+API docs are in [API_REFERENCE.md](API_REFERENCE.md).

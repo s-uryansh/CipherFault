@@ -5,4 +5,4 @@ COPY pyproject.toml README.md LICENSE ./
 COPY src/ src/
 RUN pip install --no-cache-dir ".[api]"
 
-CMD ["uvicorn", "cipherfault.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn cipherfault.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
