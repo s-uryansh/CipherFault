@@ -12,6 +12,7 @@ from secrets import token_urlsafe
 
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from rq import Retry
 from sqlalchemy import desc, func, select
@@ -59,6 +60,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="CipherFault API", version="0.1.0", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in settings.cors_origins.split(",")],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.middleware("http")(request_context_middleware)
 app.middleware("http")(rate_limit_middleware)
 
@@ -101,6 +108,11 @@ def readyz(db: Session = Depends(get_db)) -> dict[str, str]:
 @app.get("/health/dependencies")
 def dependency_health() -> dict[str, str]:
     return run_keepalive_once()
+
+
+@app.get("/v1/me")
+def get_me(org: Org = Depends(current_org)) -> dict[str, Any]:
+    return {"org_id": org.id, "org_name": org.name, "tier": org.tier}
 
 
 @app.post("/v1/scans/upload", status_code=status.HTTP_202_ACCEPTED)

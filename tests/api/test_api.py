@@ -25,6 +25,7 @@ from cipherfault.api.main import (
     delete_scan,
     get_cbom,
     get_findings,
+    get_me,
     get_scan,
     get_usage,
     healthz,
@@ -117,6 +118,13 @@ def test_auth_is_required():
     with pytest.raises(HTTPException) as exc:
         current_org(x_api_key=None, db=SessionLocal())
     assert exc.value.status_code == 401
+
+
+def test_get_me_returns_current_org():
+    db = SessionLocal()
+    org = db.get(Org, ORG_ID)
+    assert get_me(org=org) == {"org_id": ORG_ID, "org_name": "Test Org", "tier": "free"}
+    db.close()
 
 
 def test_create_scan_rejects_cross_org_storage_path():

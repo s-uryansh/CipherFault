@@ -20,6 +20,7 @@ class Settings:
     rate_limit_window_seconds: int = int(os.getenv("CIPHERFAULT_RATE_LIMIT_WINDOW_SECONDS", "60"))
     keepalive_enabled: bool = os.getenv("CIPHERFAULT_KEEPALIVE_ENABLED", "0") == "1"
     keepalive_interval_seconds: int = int(os.getenv("CIPHERFAULT_KEEPALIVE_INTERVAL_SECONDS", "120"))
+    cors_origins: str = os.getenv("CIPHERFAULT_CORS_ORIGINS", "*")
     supabase_url: str | None = os.getenv("CIPHERFAULT_SUPABASE_URL")
     supabase_key: str | None = os.getenv("CIPHERFAULT_SUPABASE_KEY")
     supabase_bucket: str | None = os.getenv("CIPHERFAULT_SUPABASE_BUCKET")

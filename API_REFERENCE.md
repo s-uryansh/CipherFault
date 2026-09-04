@@ -130,6 +130,17 @@ Response: `204`.
 
 ## Org
 
+### `GET /v1/me`
+
+Return the authenticated org from `X-API-Key`. Used by the dashboard to discover
+the org id.
+
+Response:
+
+```json
+{"org_id": "...", "org_name": "Default Org", "tier": "free"}
+```
+
 ### `GET /v1/orgs/{org_id}/scans`
 
 List latest 100 scans for the authenticated org.
