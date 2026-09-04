@@ -249,12 +249,8 @@ manifest evaluation, positive-manifest recall thresholds, wheel install, offline
 generation, the expected-limitation check, and the all-class recognizer gate checked
 with `--require-all-class`.
 
-The Docker image installs the core scanner by default. To include learned-recognizer
-dependencies in an image, build with:
-
-```bash
-docker build --build-arg CIPHERFAULT_INSTALL_TARGET='.[recognizer]' -t cipherfault:recognizer .
-```
+The SaaS API and worker images are defined in `docker/api.Dockerfile` and
+`docker/worker.Dockerfile`.
 
 ## Repository layout
 

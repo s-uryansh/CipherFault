@@ -84,8 +84,6 @@ jobs:
         env:
           PYTHONPATH: ${{ runner.temp }}/installed
       - run: python scripts/generate_sbom.py --output "${{ runner.temp }}/cipherfault.sbom.json"
-      - run: docker build -t cipherfault:ci .
-      - run: docker run --rm cipherfault:ci --version
 
   deployable-backend:
     runs-on: ubuntu-latest

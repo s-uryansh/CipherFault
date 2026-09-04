@@ -56,11 +56,11 @@ CIPHERFAULT_KEEPALIVE_INTERVAL_SECONDS=120
 Keep `CIPHERFAULT_RUN_JOBS_INLINE=0` in production. API containers should enqueue
 jobs only; worker containers own Ghidra and recognizer inference.
 
-Build an inference image from a checkout that already has those files:
+Build an inference worker image from a checkout that already has those files:
 
 ```bash
-docker build -t cipherfault:inference .
-docker run --rm cipherfault:inference --version
+docker build -t cipherfault-worker:inference -f docker/worker.Dockerfile .
+docker run --rm cipherfault-worker:inference python scripts/check_deploy_runtime.py
 ```
 
 Runtime check:

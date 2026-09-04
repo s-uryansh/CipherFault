@@ -43,6 +43,7 @@ Date: 2026-09-04
 
 - `.gitignore` already had an uncommitted `.env.dev` ignore entry.
 - `docker-compose.dev.yml` already pointed services at `.env.dev` instead of `.env.dev.example`.
+- Removed the root CLI `Dockerfile`, its CI build, stale README instructions, and the matching container test because Render uses the dedicated API and worker Dockerfiles.
 
 ## Deliberate Skips
 
