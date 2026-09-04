@@ -25,7 +25,9 @@ services:
     build:
       context: .
       dockerfile: docker/api.Dockerfile
-    env_file: .env.dev
+    env_file: .env.dev.example
+    environment:
+      CIPHERFAULT_REQUIRE_RECOGNIZER: "0"
     ports:
       - "8000:8000"
     volumes:
@@ -40,7 +42,9 @@ services:
     build:
       context: .
       dockerfile: docker/worker.Dockerfile
-    env_file: .env.dev
+    env_file: .env.dev.example
+    environment:
+      CIPHERFAULT_REQUIRE_RECOGNIZER: "1"
     volumes:
       - uploads:/uploads
     mem_limit: 4g

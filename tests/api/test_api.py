@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 os.environ["CIPHERFAULT_DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["CIPHERFAULT_RUN_JOBS_INLINE"] = "1"
+os.environ["CIPHERFAULT_REQUIRE_RECOGNIZER"] = "0"
 os.environ["CIPHERFAULT_STORAGE_DIR"] = "/tmp/cipherfault-api-test-uploads"
 
 sys.path.insert(0, "src")
