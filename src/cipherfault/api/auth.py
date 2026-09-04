@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from hashlib import sha256
 from secrets import compare_digest
+from datetime import datetime, timezone
 
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy import select
@@ -26,8 +27,20 @@ def current_org(
 
     key_hash = hash_api_key(x_api_key)
     api_key = db.scalar(select(ApiKey).where(ApiKey.key_hash == key_hash))
-    if api_key and compare_digest(api_key.key_hash, key_hash):
+    now = datetime.now(timezone.utc)
+    if (
+        api_key
+        and compare_digest(api_key.key_hash, key_hash)
+        and api_key.revoked_at is None
+        and (api_key.expires_at is None or _aware(api_key.expires_at) > now)
+    ):
         org = db.get(Org, api_key.org_id)
         if org is not None:
+            api_key.last_used_at = now
+            db.commit()
             return org
     raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid API key")
+
+
+def _aware(value):
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)

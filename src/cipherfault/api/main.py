@@ -5,24 +5,35 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import Any
 
+from datetime import datetime, timezone
+from secrets import token_urlsafe
+
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
+from redis import Redis
 from rq import Retry
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from .auth import current_org, hash_api_key
+from .bootstrap import _seed_dev_api_key
 from .config import settings
 from .db.models import ApiKey, Org, Scan, UsageEvent
-from .db.session import SessionLocal, get_db, init_db
+from .db.session import get_db, init_db
 from .queue import scan_queue
-from .storage import delete_upload, save_upload
+from .runtime import require_inference_ready
+from .storage import delete_upload, save_upload, storage_path_belongs_to_org
 from .worker import execute_scan_job
 
 
 class ScanCreate(BaseModel):
     storage_path: str
     filename: str | None = None
+
+
+class ApiKeyCreate(BaseModel):
+    name: str
+    expires_at: datetime | None = None
 
 
 @asynccontextmanager
@@ -41,17 +52,33 @@ def healthz() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/readyz")
+def readyz(db: Session = Depends(get_db)) -> dict[str, str]:
+    db.execute(select(1))
+    if not settings.run_jobs_inline:
+        Redis.from_url(settings.redis_url).ping()
+    if settings.require_recognizer:
+        require_inference_ready()
+    return {"status": "ready"}
+
+
 @app.post("/v1/scans/upload", status_code=status.HTTP_202_ACCEPTED)
 def upload_scan(
     file: UploadFile = File(...),
     org: Org = Depends(current_org),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    filename, path = save_upload(file)
+    _enforce_quota(org, db)
+    try:
+        filename, path = save_upload(file, org.id)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     scan = Scan(org_id=org.id, filename=filename, storage_path=str(path), status="queued")
     db.add(scan)
     db.commit()
     db.refresh(scan)
+    db.add(UsageEvent(org_id=org.id, scan_id=scan.id, event_type="scan_created"))
+    db.commit()
     job_id = _enqueue(scan.id)
     return {"scan_id": scan.id, "job_id": job_id, "status": scan.status}
 
@@ -62,6 +89,9 @@ def create_scan(
     org: Org = Depends(current_org),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
+    _enforce_quota(org, db)
+    if not storage_path_belongs_to_org(body.storage_path, org.id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "storage path does not belong to org")
     scan = Scan(
         org_id=org.id,
         filename=body.filename or body.storage_path.rsplit("/", 1)[-1],
@@ -71,6 +101,8 @@ def create_scan(
     db.add(scan)
     db.commit()
     db.refresh(scan)
+    db.add(UsageEvent(org_id=org.id, scan_id=scan.id, event_type="scan_created"))
+    db.commit()
     job_id = _enqueue(scan.id)
     return {"scan_id": scan.id, "job_id": job_id, "status": scan.status}
 
@@ -88,6 +120,7 @@ def get_scan(
         "status": scan.status,
         "stage": scan.stage,
         "error": scan.error,
+        "runtime": scan.runtime_json,
         "created_at": scan.created_at.isoformat(),
         "updated_at": scan.updated_at.isoformat(),
     }
@@ -125,8 +158,6 @@ def delete_scan(
 ) -> None:
     scan = _scan_for_org(db, scan_id, org.id)
     delete_upload(scan.storage_path)
-    for event in db.scalars(select(UsageEvent).where(UsageEvent.scan_id == scan.id)):
-        db.delete(event)
     db.delete(scan)
     db.commit()
 
@@ -163,7 +194,75 @@ def get_usage(
     if org_id != org.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "wrong org")
     completed = db.scalar(select(func.count()).select_from(Scan).where(Scan.org_id == org.id, Scan.status == "complete"))
-    return {"org_id": org.id, "tier": org.tier, "scans_completed": completed or 0}
+    return {
+        "org_id": org.id,
+        "tier": org.tier,
+        "scans_completed": completed or 0,
+        "monthly_limit": _monthly_limit(org),
+        "monthly_used": _monthly_usage(org, db),
+    }
+
+
+@app.get("/v1/orgs/{org_id}/api-keys")
+def list_api_keys(
+    org_id: str,
+    org: Org = Depends(current_org),
+    db: Session = Depends(get_db),
+) -> list[dict[str, Any]]:
+    if org_id != org.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "wrong org")
+    keys = db.scalars(select(ApiKey).where(ApiKey.org_id == org.id).order_by(desc(ApiKey.created_at))).all()
+    return [
+        {
+            "id": key.id,
+            "name": key.name,
+            "key_prefix": key.key_prefix,
+            "expires_at": key.expires_at.isoformat() if key.expires_at else None,
+            "revoked_at": key.revoked_at.isoformat() if key.revoked_at else None,
+            "last_used_at": key.last_used_at.isoformat() if key.last_used_at else None,
+            "created_at": key.created_at.isoformat(),
+        }
+        for key in keys
+    ]
+
+
+@app.post("/v1/orgs/{org_id}/api-keys", status_code=status.HTTP_201_CREATED)
+def create_api_key(
+    org_id: str,
+    body: ApiKeyCreate,
+    org: Org = Depends(current_org),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    if org_id != org.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "wrong org")
+    raw_key = "cf_" + token_urlsafe(32)
+    key = ApiKey(
+        org_id=org.id,
+        name=body.name,
+        key_hash=hash_api_key(raw_key),
+        key_prefix=raw_key[:8],
+        expires_at=body.expires_at,
+    )
+    db.add(key)
+    db.commit()
+    db.refresh(key)
+    return {"id": key.id, "name": key.name, "key_prefix": key.key_prefix, "api_key": raw_key}
+
+
+@app.delete("/v1/orgs/{org_id}/api-keys/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
+def revoke_api_key(
+    org_id: str,
+    key_id: str,
+    org: Org = Depends(current_org),
+    db: Session = Depends(get_db),
+) -> None:
+    if org_id != org.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "wrong org")
+    key = db.get(ApiKey, key_id)
+    if key is None or key.org_id != org.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "api key not found")
+    key.revoked_at = datetime.now(timezone.utc)
+    db.commit()
 
 
 def _scan_for_org(db: Session, scan_id: str, org_id: str) -> Scan:
@@ -186,15 +285,24 @@ def _enqueue(scan_id: str) -> str:
     return job.id
 
 
-def _seed_dev_api_key(raw_key: str) -> None:
-    db = SessionLocal()
-    try:
-        if db.scalar(select(ApiKey).where(ApiKey.key_hash == hash_api_key(raw_key))):
-            return
-        org = db.scalar(select(Org).where(Org.name == "Dev Org")) or Org(name="Dev Org")
-        db.add(org)
-        db.flush()
-        db.add(ApiKey(org_id=org.id, name="dev", key_hash=hash_api_key(raw_key)))
-        db.commit()
-    finally:
-        db.close()
+def _enforce_quota(org: Org, db: Session) -> None:
+    limit = _monthly_limit(org)
+    if limit is not None and _monthly_usage(org, db) >= limit:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "monthly scan quota exceeded")
+
+
+def _monthly_limit(org: Org) -> int | None:
+    return settings.free_tier_monthly_scans if org.tier == "free" else None
+
+
+def _monthly_usage(org: Org, db: Session) -> int:
+    now = datetime.now(timezone.utc)
+    start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    return db.scalar(
+        select(func.count()).select_from(UsageEvent).where(
+            UsageEvent.org_id == org.id,
+            UsageEvent.event_type == "scan_created",
+            UsageEvent.created_at >= start,
+        )
+    ) or 0
+

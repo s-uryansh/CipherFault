@@ -42,11 +42,13 @@ def test_supabase_storage_upload_download_and_delete(monkeypatch):
 
     monkeypatch.setattr(storage, "urlopen", fake_urlopen)
 
-    upload = UploadFile(file=BytesIO(b"binary"), filename="payment-service.out")
-    filename, stored = storage.save_upload(upload)
+    upload = UploadFile(file=BytesIO(b"\x7fELF\x02\x01" + b"binary"), filename="payment-service.out")
+    filename, stored = storage.save_upload(upload, "org-1")
 
     assert filename == "payment-service.out"
-    assert str(stored).startswith("uploads/")
+    assert str(stored).startswith("uploads/org-1/")
+    assert storage.storage_path_belongs_to_org(str(stored), "org-1")
+    assert not storage.storage_path_belongs_to_org(str(stored), "org-2")
     with storage.scan_input(str(stored)) as path:
         assert path.read_bytes() == b"binary-from-storage"
     storage.delete_upload(str(stored))
@@ -55,3 +57,45 @@ def test_supabase_storage_upload_download_and_delete(monkeypatch):
     assert methods == ["POST", "GET", "DELETE"]
     assert all("/storage/v1/object/CipherFault/" in call[1] or call[1].endswith("/storage/v1/object/CipherFault") for call in calls)
     assert all(call[3]["Apikey"] == "test-key" for call in calls)
+
+
+def test_local_storage_rejects_non_elf(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        storage,
+        "settings",
+        SimpleNamespace(
+            storage_backend="local",
+            storage_dir=tmp_path,
+            max_upload_bytes=100,
+        ),
+    )
+
+    upload = UploadFile(file=BytesIO(b"not-elf"), filename="bad.bin")
+    try:
+        storage.save_upload(upload, "org-1")
+    except ValueError as exc:
+        assert "expected a 64-bit little-endian ELF" in str(exc)
+    else:
+        raise AssertionError("non-ELF upload accepted")
+
+    assert list(tmp_path.rglob("*")) == [tmp_path / "org-1"]
+
+
+def test_local_storage_rejects_oversized_upload(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        storage,
+        "settings",
+        SimpleNamespace(
+            storage_backend="local",
+            storage_dir=tmp_path,
+            max_upload_bytes=6,
+        ),
+    )
+
+    upload = UploadFile(file=BytesIO(b"\x7fELF\x02\x01x"), filename="too-big.out")
+    try:
+        storage.save_upload(upload, "org-1")
+    except ValueError as exc:
+        assert "upload exceeds" in str(exc)
+    else:
+        raise AssertionError("oversized upload accepted")

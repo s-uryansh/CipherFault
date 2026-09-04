@@ -49,6 +49,10 @@ class ApiKey(Base):
     org_id: Mapped[str] = mapped_column(ForeignKey("orgs.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     key_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    key_prefix: Mapped[str | None] = mapped_column(String(12))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
 
     org: Mapped[Org] = relationship(back_populates="api_keys")
@@ -66,6 +70,7 @@ class Scan(Base):
     error: Mapped[str | None] = mapped_column(Text)
     report_json: Mapped[dict | None] = mapped_column(JSON)
     cbom_json: Mapped[dict | None] = mapped_column(JSON)
+    runtime_json: Mapped[dict | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now, nullable=False)
 
@@ -77,6 +82,6 @@ class UsageEvent(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_id)
     org_id: Mapped[str] = mapped_column(ForeignKey("orgs.id"), nullable=False)
-    scan_id: Mapped[str] = mapped_column(ForeignKey("scans.id"), nullable=False)
+    scan_id: Mapped[str | None] = mapped_column(ForeignKey("scans.id", ondelete="SET NULL"))
     event_type: Mapped[str] = mapped_column(String(64), nullable=False, default="scan_completed")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)

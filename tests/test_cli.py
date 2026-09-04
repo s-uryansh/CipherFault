@@ -53,3 +53,16 @@ def test_cli_passes_fingerprint_reference(monkeypatch):
     assert main(["scan", "target", "--fingerprint-reference", "reference"]) == 0
     assert str(observed["binary"]) == "target"
     assert str(observed["reference"]) == "reference"
+
+
+def test_saas_init_creates_first_run_database(capsys, monkeypatch, tmp_path):
+    db_path = tmp_path / "saas.db"
+    monkeypatch.setenv("CIPHERFAULT_DATABASE_URL", f"sqlite:///{db_path}")
+
+    for module in list(sys.modules):
+        if module.startswith("cipherfault.api."):
+            sys.modules.pop(module)
+
+    assert main(["saas-init"]) == 0
+    assert json.loads(capsys.readouterr().out) == {"database": "ready", "dev_api_key": "skipped"}
+    assert db_path.exists()

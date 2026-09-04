@@ -17,12 +17,25 @@ from fastapi import UploadFile
 from .config import settings
 
 
-def save_upload(upload: UploadFile) -> tuple[str, Path]:
+ELF64_LE_PREFIX = b"\x7fELF\x02\x01"
+
+
+def save_upload(upload: UploadFile, org_id: str) -> tuple[str, Path]:
     if settings.storage_backend == "supabase":
-        return _save_supabase_upload(upload)
+        return _save_supabase_upload(upload, org_id)
     if settings.storage_backend != "local":
         raise RuntimeError(f"unsupported storage backend: {settings.storage_backend}")
-    return _save_local_upload(upload)
+    return _save_local_upload(upload, org_id)
+
+
+def storage_path_belongs_to_org(storage_path: str, org_id: str) -> bool:
+    if settings.storage_backend == "local":
+        try:
+            Path(storage_path).resolve().relative_to((settings.storage_dir / org_id).resolve())
+            return True
+        except ValueError:
+            return False
+    return storage_path.startswith(f"uploads/{org_id}/")
 
 
 @contextmanager
@@ -50,22 +63,43 @@ def delete_upload(storage_path: str) -> None:
     raise RuntimeError(f"unsupported storage backend: {settings.storage_backend}")
 
 
-def _save_local_upload(upload: UploadFile) -> tuple[str, Path]:
-    settings.storage_dir.mkdir(parents=True, exist_ok=True)
+def _save_local_upload(upload: UploadFile, org_id: str) -> tuple[str, Path]:
+    org_dir = settings.storage_dir / org_id
+    org_dir.mkdir(parents=True, exist_ok=True)
     filename = Path(upload.filename or "binary").name
-    path = settings.storage_dir / f"{uuid4()}-{filename}"
-    with path.open("wb") as stream:
-        while chunk := upload.file.read(1024 * 1024):
-            stream.write(chunk)
+    path = org_dir / f"{uuid4()}-{filename}"
+    try:
+        with path.open("wb") as stream:
+            for chunk in _validated_chunks(upload):
+                stream.write(chunk)
+    except Exception:
+        path.unlink(missing_ok=True)
+        raise
     return filename, path
 
 
-def _save_supabase_upload(upload: UploadFile) -> tuple[str, Path]:
+def _save_supabase_upload(upload: UploadFile, org_id: str) -> tuple[str, Path]:
     filename = Path(upload.filename or "binary").name
-    key = f"uploads/{uuid4()}-{filename}"
-    data = upload.file.read()
+    key = f"uploads/{org_id}/{uuid4()}-{filename}"
+    data = b"".join(_validated_chunks(upload))
     _supabase_request("POST", _object_url(key), body=data, content_type=upload.content_type or "application/octet-stream")
     return filename, Path(key)
+
+
+def _validated_chunks(upload: UploadFile):
+    total = 0
+    first = True
+    while chunk := upload.file.read(1024 * 1024):
+        if first and not chunk.startswith(ELF64_LE_PREFIX):
+            raise ValueError("unsupported input: expected a 64-bit little-endian ELF binary")
+        first = False
+        total += len(chunk)
+        limit = getattr(settings, "max_upload_bytes", 100 * 1024 * 1024)
+        if total > limit:
+            raise ValueError(f"upload exceeds {limit} byte limit")
+        yield chunk
+    if first:
+        raise ValueError("empty upload")
 
 
 def _object_url(storage_path: str) -> str:

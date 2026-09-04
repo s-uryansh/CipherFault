@@ -32,6 +32,7 @@ def main(argv: list[str] | None = None) -> int:
         default="text",
         help="output format",
     )
+    sub.add_parser("saas-init", help="create first-run SaaS database structure")
 
     args = parser.parse_args(argv)
     if args.command == "scan":
@@ -83,6 +84,16 @@ def main(argv: list[str] | None = None) -> int:
                 location = f" @{diagnostic.address}" if diagnostic.address else ""
                 print(f"DIAGNOSTIC {diagnostic.code}{location}: {diagnostic.message}")
         return 0
+
+    if args.command == "saas-init":
+        try:
+            from .api.bootstrap import init_structured_data
+
+            print(json.dumps(init_structured_data(), sort_keys=True))
+            return 0
+        except Exception as exc:
+            print(f"cipherfault: SaaS init failed: {exc}", file=sys.stderr)
+            return 1
 
     parser.error(f"unknown command: {args.command}")
     return 2

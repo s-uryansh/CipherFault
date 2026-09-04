@@ -22,6 +22,36 @@ models/recognizer.semantic.joblib
 models/recognizer.metrics.json
 ```
 
+For a first-time database, create the SaaS structure automatically:
+
+```bash
+cipherfault saas-init
+```
+
+For an older database created before the SaaS hardening pass, apply the migration
+before starting production API/worker containers:
+
+```bash
+psql "$CIPHERFAULT_DATABASE_URL" -f migrations/001_saas_hardening.sql
+```
+
+Required production settings:
+
+```text
+CIPHERFAULT_DATABASE_URL=postgresql+psycopg://...
+CIPHERFAULT_REDIS_URL=redis://...
+CIPHERFAULT_STORAGE_BACKEND=supabase
+CIPHERFAULT_SUPABASE_URL=...
+CIPHERFAULT_SUPABASE_KEY=...
+CIPHERFAULT_SUPABASE_BUCKET=...
+CIPHERFAULT_REQUIRE_RECOGNIZER=1
+CIPHERFAULT_MAX_UPLOAD_BYTES=104857600
+CIPHERFAULT_FREE_TIER_MONTHLY_SCANS=25
+```
+
+Keep `CIPHERFAULT_RUN_JOBS_INLINE=0` in production. API containers should enqueue
+jobs only; worker containers own Ghidra and recognizer inference.
+
 Build an inference image from a checkout that already has those files:
 
 ```bash
@@ -34,6 +64,9 @@ Runtime check:
 ```bash
 python scripts/check_deploy_runtime.py
 ```
+
+The worker image runs this check during `docker build`, so missing model artifacts
+fail before deployment.
 
 The image installs `.[recognizer]`, sets `CIPHERFAULT_RECOGNIZER_MODEL`, and
 copies local `models/` into the image. GitHub cannot store the current
@@ -51,3 +84,14 @@ git add .gitattributes models/recognizer.pt models/recognizer.semantic.joblib
 
 Do not add the `.joblib` file before Git LFS is installed; it is too large for a
 normal GitHub push.
+
+Production readiness:
+
+```bash
+curl -f "$API_URL/healthz"
+curl -f "$API_URL/readyz"
+```
+
+`/healthz` only confirms the API process is alive. `/readyz` checks database,
+Redis when jobs are queued, and recognizer artifacts when
+`CIPHERFAULT_REQUIRE_RECOGNIZER=1`.

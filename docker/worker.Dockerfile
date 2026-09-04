@@ -24,6 +24,7 @@ COPY src/ src/
 COPY models/ models/
 COPY scripts/check_deploy_runtime.py scripts/check_deploy_runtime.py
 RUN pip install --no-cache-dir --index-url "$PYTORCH_CPU_INDEX_URL" torch \
-    && pip install --no-cache-dir ".[api,recognizer]"
+    && pip install --no-cache-dir ".[api,recognizer]" \
+    && python scripts/check_deploy_runtime.py
 
 CMD ["rq", "worker", "scans", "--url", "redis://redis:6379/0"]

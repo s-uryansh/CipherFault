@@ -13,6 +13,9 @@ class Settings:
     redis_url: str = os.getenv("CIPHERFAULT_REDIS_URL", "redis://localhost:6379/0")
     storage_backend: str = os.getenv("CIPHERFAULT_STORAGE_BACKEND", "local")
     storage_dir: Path = Path(os.getenv("CIPHERFAULT_STORAGE_DIR", "./.cipherfault_uploads"))
+    max_upload_bytes: int = int(os.getenv("CIPHERFAULT_MAX_UPLOAD_BYTES", str(100 * 1024 * 1024)))
+    free_tier_monthly_scans: int = int(os.getenv("CIPHERFAULT_FREE_TIER_MONTHLY_SCANS", "25"))
+    require_recognizer: bool = os.getenv("CIPHERFAULT_REQUIRE_RECOGNIZER", "1") == "1"
     supabase_url: str | None = os.getenv("CIPHERFAULT_SUPABASE_URL")
     supabase_key: str | None = os.getenv("CIPHERFAULT_SUPABASE_KEY")
     supabase_bucket: str | None = os.getenv("CIPHERFAULT_SUPABASE_BUCKET")
