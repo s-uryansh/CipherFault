@@ -2,13 +2,13 @@ services:
   - type: web
     name: cipherfault-api
     env: docker
-    dockerfilePath: ./docker/api.Dockerfile
+    dockerfilePath: ./docker/all-in-one.Dockerfile
     healthCheckPath: /readyz
     envVars:
       - key: CIPHERFAULT_RUN_JOBS_INLINE
-        value: "0"
+        value: "1"
       - key: CIPHERFAULT_REQUIRE_RECOGNIZER
-        value: "0"
+        value: "1"
       - key: CIPHERFAULT_STORAGE_BACKEND
         sync: false
       - key: CIPHERFAULT_DATABASE_URL
@@ -25,23 +25,3 @@ services:
         value: "1"
       - key: CIPHERFAULT_KEEPALIVE_INTERVAL_SECONDS
         value: "120"
-
-  - type: worker
-    name: cipherfault-worker
-    env: docker
-    dockerfilePath: ./docker/worker.Dockerfile
-    envVars:
-      - key: CIPHERFAULT_REQUIRE_RECOGNIZER
-        value: "1"
-      - key: CIPHERFAULT_STORAGE_BACKEND
-        sync: false
-      - key: CIPHERFAULT_DATABASE_URL
-        sync: false
-      - key: CIPHERFAULT_REDIS_URL
-        sync: false
-      - key: CIPHERFAULT_SUPABASE_URL
-        sync: false
-      - key: CIPHERFAULT_SUPABASE_KEY
-        sync: false
-      - key: CIPHERFAULT_SUPABASE_BUCKET
-        sync: false

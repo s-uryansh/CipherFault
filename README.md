@@ -249,8 +249,9 @@ manifest evaluation, positive-manifest recall thresholds, wheel install, offline
 generation, the expected-limitation check, and the all-class recognizer gate checked
 with `--require-all-class`.
 
-The SaaS API and worker images are defined in `docker/api.Dockerfile` and
-`docker/worker.Dockerfile`.
+The free-tier Render image is `docker/all-in-one.Dockerfile`. Split API/worker
+images live in `docker/api.Dockerfile` and `docker/worker.Dockerfile` for a
+paid deployment with separate services.
 
 ## Repository layout
 
