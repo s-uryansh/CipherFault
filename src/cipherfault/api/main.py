@@ -23,7 +23,7 @@ from .config import settings
 from .db.models import ApiKey, Org, Scan, UsageEvent
 from .db.session import check_db, get_db, init_db
 from .env_audit import log_env_status
-from .keepalive import run_keepalive_once, keepalive_loop
+from .keepalive import check_supabase_storage, run_keepalive_once, keepalive_loop
 from .middleware import rate_limit_middleware, request_context_middleware
 from .queue import check_redis, scan_queue
 from .runtime import require_inference_ready
@@ -90,6 +90,11 @@ def readyz(db: Session = Depends(get_db)) -> dict[str, str]:
             require_inference_ready()
     except Exception as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"inference unavailable: {exc}") from exc
+    try:
+        if settings.storage_backend == "supabase":
+            check_supabase_storage()
+    except Exception as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"storage unavailable: {exc}") from exc
     return {"status": "ready"}
 
 

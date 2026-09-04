@@ -27,6 +27,7 @@ dist/
 run.log
 log.run
 handoff.md
+CIPHERFAULT_SAAS_BUILD_PLAN.private.md
 # CipherFault generated/downloaded data
 corpus/build/
 corpus/external/

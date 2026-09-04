@@ -58,11 +58,17 @@ def _check_redis() -> str:
 
 
 def _check_supabase() -> str:
-    if settings.storage_backend != "supabase":
-        return "skipped"
     try:
-        _supabase_request("GET", f"{_storage_url()}/bucket/{_bucket()}")
+        check_supabase_storage()
         return "ok"
-    except Exception:
+    except RuntimeError as exc:
+        if str(exc) == "skipped":
+            return "skipped"
         log.exception("supabase keepalive failed")
-        return "failed"
+        return f"failed: {exc}"
+
+
+def check_supabase_storage() -> None:
+    if settings.storage_backend != "supabase":
+        raise RuntimeError("skipped")
+    _supabase_request("GET", f"{_storage_url()}/bucket/{_bucket()}")

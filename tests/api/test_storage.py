@@ -32,7 +32,7 @@ def test_supabase_storage_upload_download_and_delete(monkeypatch):
             storage_backend="supabase",
             supabase_url="https://ljfowjssdnllcyzpctck.supabase.co",
             supabase_key="test-key",
-            supabase_bucket="CipherFault",
+            supabase_bucket="cipherfault",
         ),
     )
 
@@ -55,7 +55,7 @@ def test_supabase_storage_upload_download_and_delete(monkeypatch):
 
     methods = [call[0] for call in calls]
     assert methods == ["POST", "GET", "DELETE"]
-    assert all("/storage/v1/object/CipherFault/" in call[1] or call[1].endswith("/storage/v1/object/CipherFault") for call in calls)
+    assert all("/storage/v1/object/cipherfault/" in call[1] or call[1].endswith("/storage/v1/object/cipherfault") for call in calls)
     assert all(call[3]["Apikey"] == "test-key" for call in calls)
 
 

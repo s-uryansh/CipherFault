@@ -68,6 +68,18 @@ def test_readyz_reports_database_failure(monkeypatch):
     assert "database unavailable" in exc.value.detail
 
 
+def test_readyz_reports_supabase_failure(monkeypatch):
+    monkeypatch.setattr(
+        "cipherfault.api.main.settings",
+        SimpleNamespace(run_jobs_inline=True, require_recognizer=False, storage_backend="supabase"),
+    )
+    monkeypatch.setattr("cipherfault.api.main.check_supabase_storage", lambda: (_ for _ in ()).throw(RuntimeError("bucket missing")))
+    with pytest.raises(HTTPException) as exc:
+        readyz()
+    assert exc.value.status_code == 503
+    assert "storage unavailable" in exc.value.detail
+
+
 def test_upload_scan_completes_inline(monkeypatch, tmp_path):
     report = AnalysisReport(target="demo.out", target_sha256="0" * 64)
     report.verified_facts = [{"id": "fact-1"}]
